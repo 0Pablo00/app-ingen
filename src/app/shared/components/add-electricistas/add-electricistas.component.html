@@ -1,0 +1,24 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Agregar Electricista</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">Cerrar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <form [formGroup]="electricistaForm" (ngSubmit)="onSubmit()">
+    <ion-item>
+      <ion-label position="floating">Nombre del Técnico de Guardia</ion-label>
+      <ion-input formControlName="nombreGuardia"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="floating">Nombre del Técnico Próxima Semana</ion-label>
+      <ion-input formControlName="nombreProximo"></ion-input>
+    </ion-item>
+
+    <ion-button expand="full" type="submit" [disabled]="electricistaForm.invalid">Guardar</ion-button>
+  </form>
+</ion-content>

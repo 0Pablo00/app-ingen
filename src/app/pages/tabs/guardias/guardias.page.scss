@@ -1,0 +1,49 @@
+/* guardias.page.scss */
+
+.content {
+    padding: 16px;
+  }
+  
+  h3 {
+    margin: 10px 0;
+  }
+  
+  ion-button {
+    margin-top: 10px;
+  }
+  
+  /* Estilos específicos para el área de botones */
+  .botonesabajo {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  /* Estilos para la lista de guardias adicionales */
+  div > div {
+    margin-bottom: 20px;
+  }
+
+
+  .tecnico{
+
+    color: #f9a607;
+  }
+
+  .operario{
+color: #3171e0;
+
+  }
+
+  .operarios{
+
+    font-weight: bold;
+   
+  }
+
+
+  .slide{
+background-color:#F4F5F8;
+
+
+  }

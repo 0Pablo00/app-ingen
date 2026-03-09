@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "335156814976",
+    "project_id": "tareas-mfi",
+    "storage_bucket": "tareas-mfi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:335156814976:android:95b4267c96805aec53b265",
+        "android_client_info": {
+          "package_name": "io.ionic.starter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC51yR8hB95-xHUiH11TTIg6V2zkIN9jFo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

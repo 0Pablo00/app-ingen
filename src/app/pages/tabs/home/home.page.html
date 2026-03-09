@@ -1,0 +1,234 @@
+<ion-content [fullscreen]="true" class="home-content">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+  
+  <app-header title="INGEN"></app-header>
+  
+  <div class="content">
+    <!-- Botón Nueva Orden -->
+    <ion-button (click)="checkPasswordAndAddOrUpdateTask()" class="ion-margin" mode="ios">
+      Nueva Orden
+      <ion-icon slot="end" name="add-circle-outline"></ion-icon>
+    </ion-button>
+    
+    <!-- 👇 NUEVO: BUSCADOR EN TIEMPO REAL -->
+    <div class="search-container">
+      <ion-searchbar
+        [(ngModel)]="searchTerm"
+        (ionInput)="onSearchInput($event)"
+        placeholder="Buscar por #orden, técnico, título, fecha..."
+        animated
+        debounce="300"
+        showCancelButton="focus"
+        cancelButtonText="Cancelar">
+      </ion-searchbar>
+      
+      <!-- Indicador de búsqueda -->
+      <div class="search-info" *ngIf="searchTerm && !isSearching">
+        <ion-chip color="primary" outline>
+          <ion-icon name="search-outline"></ion-icon>
+          <ion-label>{{ filteredTasks.length }} resultados para "{{ searchTerm }}"</ion-label>
+          <ion-icon name="close-circle" (click)="clearSearch()"></ion-icon>
+        </ion-chip>
+      </div>
+      
+      <!-- Loader de búsqueda -->
+      <div class="search-loading" *ngIf="isSearching">
+        <ion-spinner name="dots"></ion-spinner>
+        <span>Buscando...</span>
+      </div>
+    </div>
+    
+    <!-- Indicador de ordenamiento (solo si hay resultados) -->
+    <div class="sort-indicator" *ngIf="filteredTasks.length > 0">
+      <ion-chip color="primary" outline>
+        <ion-icon name="funnel-outline"></ion-icon>
+        <ion-label>Ordenado por: Número de orden</ion-label>
+      </ion-chip>
+    </div>
+    
+    <ion-grid>
+      <ion-row>
+        <!-- Usar filteredTasks en lugar de tasks -->
+        <ion-col *ngFor="let task of filteredTasks" size-lg="6" size-md="6" size-sm="12" size="12">
+          <ion-card mode="ios" class="task-card" [class.highlight]="searchTerm && taskMatchesSearch(task)">
+            <!-- Badge con número de orden -->
+            <div class="order-number-badge" *ngIf="task.orderNumber">
+              <span class="badge-text">#{{task.orderNumber}}</span>
+            </div>
+            
+            <ion-grid>
+              <ion-row>
+                <ion-col class="ion-text-center" size-lg="5" size-md="5" size-sm="4" size="12">
+                  <circle-progress
+                    [percent]="getPercentage(task)"
+                    [radius]="65"
+                    [outerStrokeWidth]="6"
+                    [innerStrokeWidth]="4"
+                    [outerStrokeColor]="'#78C000'"
+                    [innerStrokeColor]="'#C7E596'"
+                    [animation]="true"
+                    [titleColor]="'var(--ion-color-dark)'"
+                    [animationDuration]="300"
+                    [subtitle]="'Progreso'">
+                  </circle-progress>
+                </ion-col>
+                
+                <ion-col class="ion-padding" size-lg="7" size-md="7" size-sm="8" size="12">
+                  <div class="title">
+                    <span class="order-prefix" *ngIf="task.orderNumber">#{{task.orderNumber}} - </span>
+                    {{task.title}}
+                    <!-- Badge de coincidencia (opcional) -->
+                    <span class="match-badge" *ngIf="searchTerm && task.orderNumber?.toString().includes(searchTerm)">🔍</span>
+                  </div>
+                  <p>{{task.description  | slice:0:85}}...</p>
+
+                  <!-- SECCIÓN: TÉCNICO -->
+                  <div class="tecnico-info" *ngIf="task.tecnicoNombre" [class.match-highlight]="searchTerm && task.tecnicoNombre.toLowerCase().includes(searchTerm.toLowerCase())">
+                    <ion-icon name="person-outline" color="primary"></ion-icon>
+                    <span>Técnico: <strong>{{ task.tecnicoNombre }}</strong></span>
+                  </div>
+
+<!-- SECCIÓN: SUCURSAL -->
+<div class="sucursal-info" *ngIf="task.sucursal" [class.match-highlight]="searchTerm && task.sucursal.toLowerCase().includes(searchTerm.toLowerCase())">
+  <ion-icon name="business-outline" color="primary"></ion-icon>
+  <span>Sucursal: <strong>{{ task.sucursal }}</strong></span>
+</div>
+
+                  <!-- SECCIÓN: MATERIALES -->
+                  <div class="materiales-info" *ngIf="task.materiales?.length">
+                    <div class="materiales-header" (click)="toggleMateriales(task.id)">
+                      <ion-icon name="cube-outline" color="primary"></ion-icon>
+                      <span>Materiales ({{ task.materiales.length }})</span>
+                      <ion-icon [name]="isMaterialesExpanded(task.id) ? 'chevron-up-outline' : 'chevron-down-outline'" slot="end"></ion-icon>
+                    </div>
+                    
+                    <div class="materiales-list" *ngIf="isMaterialesExpanded(task.id)">
+                      <div class="material-item" *ngFor="let material of task.materiales" 
+                           [class.match-highlight]="searchTerm && material.nombre.toLowerCase().includes(searchTerm.toLowerCase())">
+                        <div class="material-name">{{ material.nombre }}</div>
+                        <div class="material-details" *ngIf="material.cantidad">
+                          Cantidad: {{ material.cantidad }} {{ material.unidad }}
+                        </div>
+                        <div class="material-obs" *ngIf="material.observacion">
+                          {{ material.observacion }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Fecha de creación -->
+                  <div class="task-date" *ngIf="task.createdAt">
+                    <ion-icon name="calendar-outline"></ion-icon>
+                    <span>Creada: {{ task.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                  
+                  <!-- Documento cargado -->
+                  <div class="order-doc-ok" *ngIf="task.orderImage">
+                    <ion-icon name="checkmark-circle" color="success"></ion-icon>
+                    <span>Documento cargado</span>
+                  </div>
+                  
+                  <!-- Fecha del documento -->
+                  <div class="order-doc-date" *ngIf="task.orderImageAt">
+                    <ion-icon name="time-outline"></ion-icon>
+                    <span>{{ task.orderImageAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                  </div>
+                  
+                  <!-- SECCIÓN DE BOTONES -->
+                  <div class="ion-text-center ion-margin-top">
+                    <ion-button (click)="addOrUpdateTask(task)" class="task-btn" mode="ios" size="small">
+                      Ver Tarea
+                      <ion-icon slot="end" name="eye-outline"></ion-icon>
+                    </ion-button>
+                    
+                    <ion-button 
+                      *ngIf="canEditOrDelete()" 
+                      (click)="editOrderNumber(task)" 
+                      class="task-btn" 
+                      mode="ios" 
+                      color="warning" 
+                      size="small">
+                      <ion-icon name="settings-outline"></ion-icon>
+                    </ion-button>
+                     <!-- 👇 NUEVO BOTÓN PARA VER ID - SOLO ADMIN -->
+  <ion-button 
+    *ngIf="canEditOrDelete()" 
+    (click)="showTaskId(task)" 
+    class="task-btn" 
+    mode="ios" 
+    color="tertiary" 
+    size="small"
+    title="Ver ID de la tarea para Firebase">
+    <ion-icon name="barcode-outline"></ion-icon>
+    ID
+  </ion-button>
+
+                    <ion-button 
+                      (click)="checkPasswordAndConfirmDeleteTask(task)" 
+                      class="task-btn" 
+                      mode="ios" 
+                      color="danger" 
+                      size="small"
+                      [disabled]="isDeleting">
+                      Eliminar Tarea
+                      <ion-icon slot="end" name="trash-outline"></ion-icon>
+                    </ion-button>
+                  </div>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+      
+      <!-- Cargando más tareas -->
+      <ion-row *ngIf="loading && !searchTerm">
+        <ion-col *ngFor="let p of [1,1,1,1,1,1,1,1,1,1,1,1,1]" size-lg="6" size-md="6" size-sm="12" size="12">
+          <ion-card mod="ios">
+            <div *ngFor="let item of [1,1,1,1]">
+              <ion-skeleton-text animated style="width: 50%"></ion-skeleton-text>
+            </div>
+            <div *ngFor="let item of [1,1,1,1]">
+              <ion-skeleton-text animated style="width: 40%"></ion-skeleton-text>
+            </div>
+          </ion-card>
+        </ion-col>
+      </ion-row>
+      
+      <!-- Sin resultados de búsqueda -->
+      <ion-row *ngIf="!loading && searchTerm && filteredTasks.length === 0">
+        <ion-col class="empty" size="12">
+          <ion-icon name="search-outline"></ion-icon>
+          <h4>No se encontraron resultados</h4>
+          <p>No hay tareas que coincidan con "{{ searchTerm }}"</p>
+          <ion-button fill="clear" (click)="clearSearch()">
+            <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+            Limpiar búsqueda
+          </ion-button>
+        </ion-col>
+      </ion-row>
+      
+      <!-- Sin tareas (sin búsqueda) -->
+      <ion-row *ngIf="!loading && !searchTerm && tasks.length === 0">
+        <ion-col class="empty" size="12">
+          <ion-icon name="create-outline"></ion-icon>
+          <h4>No tienes trabajos en proceso</h4>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+    
+       <!-- Infinite Scroll (solo cuando no hay búsqueda activa) -->
+    <ion-infinite-scroll 
+      *ngIf="!searchTerm"
+      threshold="100px" 
+      (ionInfinite)="loadMoreTasks($event)"
+      [disabled]="!hasMoreData">
+      <ion-infinite-scroll-content
+        loadingSpinner="bubbles"
+        loadingText="Cargando más tareas...">
+      </ion-infinite-scroll-content> <!-- 👈 CORREGIDO -->
+    </ion-infinite-scroll>
+  </div>
+</ion-content>

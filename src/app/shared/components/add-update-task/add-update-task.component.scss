@@ -1,0 +1,442 @@
+.item-header {
+  --padding-top: 20px;
+  
+  ion-label {
+    font-size: 18px;
+    font-weight: bold;
+  }
+}
+
+.section-header {
+  --padding-top: 20px;
+  --padding-bottom: 10px;
+  
+  h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ion-color-primary);
+    margin: 0;
+  }
+  
+  p {
+    font-size: 14px;
+    color: var(--ion-color-medium);
+    margin: 4px 0 0 0;
+  }
+}
+
+ion-range {
+  --bar-background: rgba(128, 128, 128, 0.281);
+  --bar-background-active: var(--ion-color-success);
+  --height: 20px;
+  --knob-size: 5px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.item-reorder {
+  --min-height: 32px;
+}
+
+.task-item {
+  --padding-start: 8px;
+  --inner-padding-end: 8px;
+  
+  ion-label {
+    font-size: 14px;
+  }
+}
+
+ion-footer {
+  background: var(--ion-color-light);
+  
+  .submit-btn {
+    margin: 8px 16px;
+    font-weight: 600;
+  }
+}
+
+.date-picker {
+  margin: 8px 0;
+  
+  ion-datetime {
+    width: 100%;
+    margin-top: 10px;
+  }
+}
+
+// Estilos para la sección de materiales
+.materiales-form-section {
+  padding: 8px 16px;
+  
+  .material-form-card {
+    margin: 0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    
+    ion-card-header {
+      padding-bottom: 8px;
+      
+      ion-card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--ion-color-primary);
+      }
+    }
+    
+    ion-card-content {
+      padding-top: 0;
+    }
+    
+    ion-item {
+      --padding-start: 0;
+      --inner-padding-end: 0;
+    }
+    
+    ion-grid {
+      padding: 0;
+    }
+    
+    ion-button {
+      margin-top: 16px;
+    }
+  }
+}
+
+.materiales-list {
+  padding: 8px 16px;
+  
+  .material-item {
+    --padding-start: 8px;
+    --inner-padding-end: 8px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    --background: rgba(var(--ion-color-primary-rgb), 0.05);
+    border-left: 3px solid var(--ion-color-primary);
+    
+    h2 {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      
+      ion-icon {
+        font-size: 18px;
+        color: var(--ion-color-primary);
+      }
+    }
+    
+    p {
+      font-size: 13px;
+      color: var(--ion-color-medium);
+      margin: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      
+      ion-icon {
+        font-size: 14px;
+        color: var(--ion-color-medium);
+      }
+    }
+  }
+}
+
+.empty-message {
+  text-align: center;
+  padding: 20px;
+  color: var(--ion-color-medium);
+  
+  p {
+    font-size: 14px;
+    margin: 0;
+    
+    ion-icon {
+      font-size: 16px;
+      vertical-align: middle;
+    }
+  }
+}
+
+// Estilos para la sección de imagen
+.order-image-section {
+  margin-top: 16px;
+  
+  .image-container {
+    width: 100%;
+    margin: 8px 0;
+    
+    .image-preview {
+      position: relative;
+      width: 100%;
+      max-height: 200px;
+      overflow: hidden;
+      border-radius: 8px;
+      cursor: pointer;
+      
+      img {
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+      }
+      
+      .image-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s;
+        
+        ion-icon {
+          font-size: 40px;
+          color: white;
+        }
+        
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
+    
+    .file-info {
+      padding: 8px;
+      font-size: 12px;
+      color: var(--ion-color-medium);
+      text-align: center;
+      
+      small {
+        display: inline-block;
+        margin: 2px 4px;
+      }
+    }
+  }
+  
+  .upload-button, .image-actions {
+    width: 100%;
+    margin: 8px 0;
+  }
+}
+
+.finalizada-checkbox {
+  margin-top: 16px;
+  --background: rgba(var(--ion-color-success-rgb), 0.1);
+  border-radius: 8px;
+  
+  h2 {
+    font-weight: 600;
+    color: var(--ion-color-success);
+  }
+  
+  p {
+    font-size: 13px;
+    color: var(--ion-color-medium);
+  }
+}
+
+.validators {
+  padding: 4px 16px;
+  color: var(--ion-color-danger);
+  font-size: 12px;
+  
+  div {
+    margin: 2px 0;
+  }
+}
+
+// Estilos para los chips de unidades
+ion-chip {
+  margin: 4px;
+  height: 28px;
+  font-size: 12px;
+}
+
+// Responsive
+@media (max-width: 576px) {
+  .materiales-form-section {
+    padding: 8px;
+    
+    ion-grid {
+      ion-col {
+        padding: 2px;
+      }
+    }
+  }
+  
+  .material-item {
+    h2 {
+      font-size: 14px;
+    }
+    
+    p {
+      font-size: 12px;
+    }
+  }
+}
+
+// Estilos para el selector de sucursales con acordeones
+.sucursal-container {
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  
+  .sucursal-label {
+    margin-bottom: 4px;
+    
+    ion-label {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--ion-color-primary);
+    }
+  }
+  
+  .search-sucursal {
+    --border-radius: 8px;
+    --background: var(--ion-color-light);
+    margin-bottom: 8px;
+    
+    ion-input {
+      --padding-start: 8px;
+    }
+    
+    .clear-icon {
+      cursor: pointer;
+      font-size: 18px;
+      
+      &:hover {
+        opacity: 0.8;
+      }
+    }
+  }
+  
+  .sucursales-list {
+    max-height: 350px;
+    overflow-y: auto;
+    background: var(--ion-color-light);
+    border-radius: 8px;
+    padding: 4px 0;
+    
+    .sucursal-group {
+      margin-bottom: 4px;
+      
+      .provincia-header {
+        --padding-start: 12px;
+        --min-height: 48px;
+        --background: rgba(var(--ion-color-primary-rgb), 0.05);
+        font-weight: 600;
+        
+        h2 {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--ion-color-primary);
+          margin: 0;
+        }
+        
+        p {
+          font-size: 12px;
+          color: var(--ion-color-medium);
+          margin: 2px 0 0 0;
+        }
+        
+        ion-icon:first-child {
+          font-size: 20px;
+          color: var(--ion-color-primary);
+        }
+        
+        
+      }
+      
+      .sucursales-sub-list {
+        background: transparent;
+        padding-left: 8px;
+        
+        .sucursal-item {
+          --padding-start: 36px;
+          --min-height: 44px;
+          font-size: 14px;
+          --background: transparent;
+          
+          &:hover {
+            --background: rgba(var(--ion-color-primary-rgb), 0.05);
+          }
+          
+          &.selected {
+            --background: rgba(var(--ion-color-success-rgb), 0.1);
+            font-weight: 500;
+          }
+          
+          ion-icon {
+            font-size: 18px;
+          }
+        }
+      }
+    }
+    
+    // Estilos para resultados de búsqueda
+    .search-results-group {
+      margin-bottom: 12px;
+      
+      .provincia-tag {
+        padding: 4px 12px;
+        
+        ion-badge {
+          font-size: 11px;
+          padding: 4px 8px;
+          border-radius: 12px;
+        }
+      }
+      
+      .search-result {
+        --padding-start: 36px;
+      }
+    }
+    
+    .no-results {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px;
+      color: var(--ion-color-medium);
+      
+      ion-icon {
+        font-size: 48px;
+        margin-bottom: 8px;
+      }
+      
+      p {
+        margin: 0;
+        font-size: 14px;
+      }
+    }
+  }
+  
+  .selected-sucursal {
+    --background: rgba(var(--ion-color-success-rgb), 0.1);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    
+    h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ion-color-success);
+      margin: 0 0 4px 0;
+    }
+    
+    p {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--ion-color-dark);
+      margin: 0;
+    }
+    
+    ion-button {
+      --color: var(--ion-color-medium);
+    }
+  }
+}

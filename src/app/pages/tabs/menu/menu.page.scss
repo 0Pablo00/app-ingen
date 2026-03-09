@@ -1,0 +1,35 @@
+
+.image-button {
+  --box-shadow:none;
+  display: block;
+  margin: 20px auto;
+   /* Adjust the size as needed */
+  background: none;
+  border: none !important; /* To remove default button border */
+  transition: transform 0.3s, opacity 0.3s;
+  --background: transparent !important;
+  img {
+   
+    transition: transform 0.3s, opacity 0.3s;
+    border: none !important;
+  }
+
+  &:hover {
+    transform: scale(1.05); /* Slightly enlarge the button */
+    
+    img {
+      opacity: 0.8; /* Slightly reduce opacity */
+      transform: scale(1.05); /* Slightly enlarge the image */
+    }
+  }
+}
+
+.logomenu{
+display: block;
+  
+  width: 68px;
+  left: 10px;
+  top: 9px;
+  position: relative;
+
+}

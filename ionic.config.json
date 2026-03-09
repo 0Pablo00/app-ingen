@@ -1,0 +1,7 @@
+{
+  "name": "mfi-app",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

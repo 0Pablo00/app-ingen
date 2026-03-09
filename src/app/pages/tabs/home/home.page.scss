@@ -1,0 +1,426 @@
+/* home.page.scss optimizado */
+
+.content {
+  padding-bottom: 80px;
+}
+
+ion-grid {
+  margin-bottom: 20px;
+}
+
+/* Indicador de ordenamiento */
+.sort-indicator {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+  
+  ion-chip {
+    font-size: 12px;
+    height: 28px;
+    
+    ion-icon {
+      font-size: 16px;
+      margin-right: 6px;
+    }
+  }
+}
+
+/* Fecha */
+.task-date {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  span {
+    font-weight: 500;
+    color: var(--ion-color-primary);
+  }
+  
+  ion-icon {
+    font-size: 16px;
+    color: var(--ion-color-primary);
+  }
+}
+
+/* Tarjetas */
+ion-card {
+  margin: 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  min-height: 200px;
+  position: relative;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  }
+  
+  .title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ion-color-dark);
+    margin-bottom: 8px;
+    line-height: 1.3;
+    
+    .order-prefix {
+      color: var(--ion-color-primary);
+      font-weight: 700;
+    }
+  }
+  
+  p {
+    font-size: 14px;
+    color: var(--ion-color-medium);
+    line-height: 1.5;
+    margin: 0 0 12px 0;
+  }
+}
+
+// Botón terciario (ID)
+.task-btn[color="tertiary"] {
+  --background: var(--ion-color-tertiary);
+  --color: white;
+  
+  ion-icon {
+    margin-right: 4px;
+  }
+}
+
+/* Badge de número de orden */
+.order-number-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  
+  .badge-text {
+    background: linear-gradient(135deg, #000, #e53935);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    display: inline-block;
+  }
+}
+
+/* Botones */
+.task-btn {
+  margin: 4px;
+  font-size: 13px;
+  height: 32px;
+  min-width: 110px;
+  
+  ion-icon {
+    font-size: 16px;
+    margin-left: 4px;
+  }
+}
+
+/* Documentos */
+.order-doc-ok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--ion-color-success);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.order-doc-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Contenedor de botones */
+.ion-text-center.ion-margin-top {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(var(--ion-color-medium-rgb), 0.1);
+}
+
+/* Estado vacío */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  
+  ion-icon {
+    font-size: 64px;
+    color: var(--ion-color-medium);
+    margin-bottom: 16px;
+  }
+  
+  h4 {
+    color: var(--ion-color-medium);
+    font-weight: 500;
+    margin: 0;
+  }
+}
+
+/* Técnico y materiales */
+.tecnico-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ion-color-dark);
+  margin: 8px 0;
+  padding: 6px 10px;
+  background: rgba(var(--ion-color-primary-rgb), 0.08);
+  border-radius: 6px;
+  
+  ion-icon {
+    font-size: 18px;
+  }
+  
+  strong {
+    color: var(--ion-color-primary);
+  }
+}
+
+.materiales-info {
+  margin: 12px 0;
+  border: 1px solid rgba(var(--ion-color-primary-rgb), 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  
+  .materiales-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: rgba(var(--ion-color-primary-rgb), 0.05);
+    cursor: pointer;
+    font-weight: 500;
+    
+    ion-icon:first-child {
+      font-size: 18px;
+      color: var(--ion-color-primary);
+    }
+    
+    ion-icon:last-child {
+      margin-left: auto;
+      font-size: 16px;
+      color: var(--ion-color-medium);
+    }
+  }
+  
+  .materiales-list {
+    padding: 8px;
+    border-top: 1px solid rgba(var(--ion-color-primary-rgb), 0.1);
+    
+    .material-item {
+      padding: 8px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .material-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--ion-color-dark);
+      }
+      
+      .material-details {
+        font-size: 13px;
+        color: var(--ion-color-primary);
+        margin-top: 2px;
+      }
+      
+      .material-obs {
+        font-size: 12px;
+        color: var(--ion-color-medium);
+        margin-top: 2px;
+        font-style: italic;
+      }
+    }
+  }
+}
+
+/* Loading */
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  
+  ion-spinner {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .content {
+    padding-bottom: 60px;
+  }
+  
+  ion-card {
+    min-height: 180px;
+    
+    .title {
+      font-size: 16px;
+    }
+    
+    p {
+      font-size: 13px;
+    }
+  }
+  
+  .task-btn {
+    min-width: 100px;
+    font-size: 12px;
+    height: 30px;
+  }
+  
+  .order-number-badge {
+    top: 8px;
+    right: 8px;
+    
+    .badge-text {
+      padding: 3px 8px;
+      font-size: 12px;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  ion-col[size-sm="12"] {
+    padding: 4px;
+  }
+  
+  ion-card {
+    margin: 4px;
+    min-height: 160px;
+  }
+  
+  .content {
+    padding-bottom: 70px;
+  }
+  
+  .sort-indicator {
+    margin: 12px 0;
+    
+    ion-chip {
+      font-size: 11px;
+      height: 26px;
+    }
+  }
+}
+
+ion-content {
+  --padding-bottom: 80px;
+}
+
+/* ... (todo tu CSS existente) ... */
+
+/* Estilos para el buscador */
+.search-container {
+  padding: 8px 16px;
+  
+  ion-searchbar {
+    --border-radius: 12px;
+    --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 0;
+  }
+  
+  .search-info {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+    
+    ion-chip {
+      font-size: 13px;
+      height: 32px;
+      
+      ion-icon:last-child {
+        cursor: pointer;
+        font-size: 18px;
+        
+        &:hover {
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+  
+  .search-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    color: var(--ion-color-primary);
+    font-size: 13px;
+    
+    ion-spinner {
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+/* Highlight para resultados de búsqueda */
+.match-highlight {
+  background: rgba(var(--ion-color-warning-rgb), 0.2) !important;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.match-badge {
+  margin-left: 4px;
+  font-size: 14px;
+}
+
+/* Tarjeta destacada cuando hay búsqueda */
+.task-card.highlight {
+  border: 2px solid var(--ion-color-primary);
+  box-shadow: 0 4px 16px rgba(var(--ion-color-primary-rgb), 0.3);
+}
+
+/* Estado vacío mejorado */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  
+  ion-icon {
+    font-size: 64px;
+    color: var(--ion-color-medium);
+    margin-bottom: 16px;
+  }
+  
+  h4 {
+    color: var(--ion-color-medium);
+    font-weight: 500;
+    margin: 0 0 8px;
+  }
+  
+  p {
+    color: var(--ion-color-medium-shade);
+    margin: 0 0 16px;
+  }
+  
+  ion-button {
+    --color: var(--ion-color-primary);
+  }
+}

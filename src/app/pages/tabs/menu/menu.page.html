@@ -1,0 +1,36 @@
+
+
+<ion-content  [fullscreen]="true">
+  <img class="logomenu" src="assets/icon/logoingen.jpg" />
+  
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+  <div class="content ion-text-center">
+    
+  
+<ion-button expand="full" class="image-button" (click)="goToObras()">
+      <img src="assets/botones/ordenes.png" alt="Guardias" />
+    </ion-button>
+
+    <ion-button expand="full" class="image-button"  (click)="goToOrdenes()">
+      <img src="assets/botones/obras.png" alt="Obras" />
+    </ion-button>
+
+    <ion-button expand="full" class="image-button" (click)="goToGuardias()">
+      <img src="assets/botones/guardias.png" alt="Guardias" />
+    </ion-button>
+
+    
+
+    <ion-button expand="full" class="image-button" (click)="checkPasswordAndGoToAires()">
+      <img src="assets/botones/aires.png" alt="Guardias" />
+    </ion-button>
+
+    <ion-button expand="full" class="image-button" (click)="checkPasswordAndGoToHys()">
+      <img src="assets/botones/hys.png" alt="Guardias" />
+    </ion-button>
+    
+    
+   </div>
+</ion-content>

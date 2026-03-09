@@ -1,0 +1,29 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Agregar Guardias</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">Cerrar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <form [formGroup]="guardiasForm" (ngSubmit)="submitForm()">
+    <ion-item>
+      <ion-label position="floating">Nombre del Operario 1</ion-label>
+      <ion-input formControlName="nombre1"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label position="floating">Nombre del Operario 2</ion-label>
+      <ion-input formControlName="nombre2"></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-label>Fecha</ion-label>
+      <ion-datetime formControlName="fecha" displayFormat="MMMM DD, YYYY"></ion-datetime>
+    </ion-item>
+
+    <ion-button expand="full" type="submit">Guardar</ion-button>
+  </form>
+</ion-content>

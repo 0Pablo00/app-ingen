@@ -1,0 +1,28 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>{{ title || 'Imagen' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="image-container">
+    <img [src]="imageUrl" alt="Imagen" (click)="dismiss()">
+  </div>
+  
+  <div class="actions" *ngIf="platform.is('android') || platform.is('ios')">
+    <ion-button expand="block" (click)="shareImage()" fill="outline">
+      <ion-icon name="share-outline" slot="start"></ion-icon>
+      Compartir
+    </ion-button>
+    
+    <ion-button expand="block" (click)="suggestSave()" fill="outline">
+      <ion-icon name="download-outline" slot="start"></ion-icon>
+      Guardar
+    </ion-button>
+  </div>
+</ion-content>

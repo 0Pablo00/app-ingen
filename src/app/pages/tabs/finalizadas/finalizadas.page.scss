@@ -1,0 +1,470 @@
+.finalizadas-content {
+  --background: var(--ion-color-light);
+  
+  .content {
+    padding: 16px;
+  }
+  
+  .task-counter {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0 20px;
+    
+    ion-chip {
+      font-size: 1rem;
+      padding: 8px 16px;
+      
+      ion-icon {
+        font-size: 1.2rem;
+      }
+    }
+  }
+  
+  .task-card {
+    position: relative;
+    border-radius: 12px;
+    margin: 8px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    
+    &.finalizada {
+      opacity: 0.95;
+      border-left: 4px solid var(--ion-color-success);
+    }
+    
+    .finalizada-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--ion-color-success);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 16px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      z-index: 10;
+      
+      ion-icon {
+        font-size: 1rem;
+      }
+    }
+  }
+  
+  .order-number-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    
+    .badge-text {
+      background: linear-gradient(135deg, #000, #e53935);
+      color: #fff;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      display: inline-block;
+    }
+  }
+  
+  .title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--ion-color-dark);
+    padding-right: 80px;
+    padding-left: 60px; // Espacio para el badge de número
+    
+    .order-prefix {
+      color: var(--ion-color-primary);
+      font-weight: 700;
+    }
+  }
+  
+  .task-date, .finalizada-date, .order-doc-ok {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    margin: 4px 0;
+    color: var(--ion-color-medium);
+    
+    ion-icon {
+      font-size: 1rem;
+    }
+  }
+  
+  .finalizada-date {
+    color: var(--ion-color-success);
+    font-weight: 500;
+  }
+  
+  .order-doc-ok {
+    background: var(--ion-color-light);
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+    
+    ion-icon {
+      color: var(--ion-color-primary);
+    }
+    
+    ion-button {
+      --padding-start: 4px;
+      --padding-end: 4px;
+      margin-left: auto;
+    }
+  }
+  
+  // 👇 NUEVOS ESTILOS PARA TÉCNICO Y MATERIALES
+  .tecnico-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--ion-color-dark);
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: rgba(var(--ion-color-primary-rgb), 0.08);
+    border-radius: 8px;
+    
+    ion-icon {
+      font-size: 1.1rem;
+    }
+    
+    strong {
+      color: var(--ion-color-primary);
+    }
+  }
+
+  .materiales-info {
+    margin: 12px 0;
+    border: 1px solid rgba(var(--ion-color-primary-rgb), 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    
+    .materiales-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(var(--ion-color-primary-rgb), 0.05);
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+      
+      ion-icon:first-child {
+        font-size: 1.1rem;
+        color: var(--ion-color-primary);
+      }
+      
+      ion-icon:last-child {
+        margin-left: auto;
+        font-size: 1rem;
+        color: var(--ion-color-medium);
+      }
+    }
+    
+    .materiales-list {
+      padding: 8px;
+      border-top: 1px solid rgba(var(--ion-color-primary-rgb), 0.1);
+      
+      .material-item {
+        padding: 10px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        .material-name {
+          font-weight: 600;
+          font-size: 0.9rem;
+          color: var(--ion-color-dark);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          
+          &:before {
+            content: "•";
+            color: var(--ion-color-primary);
+            font-weight: bold;
+            font-size: 1.2rem;
+          }
+        }
+        
+        .material-details {
+          font-size: 0.8rem;
+          color: var(--ion-color-primary);
+          margin-top: 4px;
+          margin-left: 16px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          
+          ion-icon {
+            font-size: 0.9rem;
+          }
+        }
+        
+        .material-obs {
+          font-size: 0.8rem;
+          color: var(--ion-color-medium);
+          margin-top: 4px;
+          margin-left: 16px;
+          font-style: italic;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          
+          ion-icon {
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+  }
+  
+  .task-btn {
+    margin: 0 4px;
+  }
+  
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    
+    ion-icon {
+      font-size: 5rem;
+      color: var(--ion-color-medium);
+    }
+    
+    h4 {
+      color: var(--ion-color-medium);
+      margin: 16px 0 8px;
+    }
+    
+    p {
+      color: var(--ion-color-medium-shade);
+    }
+  }
+}
+
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  
+  ion-spinner {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 10px;
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    font-size: 0.9rem;
+  }
+}
+
+.loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  
+  ion-spinner {
+    width: 24px;
+    height: 24px;
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    margin: 0;
+  }
+}
+
+.end-message {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  
+  ion-chip {
+    background: var(--ion-color-success-tint);
+    color: var(--ion-color-success);
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  
+  ion-icon {
+    font-size: 5rem;
+    color: var(--ion-color-medium);
+  }
+  
+  h4 {
+    color: var(--ion-color-medium);
+    margin-top: 16px;
+    font-weight: normal;
+  }
+  
+  .offline-text {
+    color: var(--ion-color-warning);
+    font-size: 0.9rem;
+    margin-top: 10px;
+  }
+}
+
+.offline-banner {
+  background: var(--ion-color-warning);
+  color: var(--ion-color-warning-contrast);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+  
+  ion-icon {
+    font-size: 1.2rem;
+  }
+}
+
+.task-counter {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 20px;
+  
+  ion-chip {
+    font-size: 0.9rem;
+    padding: 6px 12px;
+  }
+}
+/* ... (todo tu CSS existente) ... */
+
+/* Estilos para el buscador */
+.search-container {
+  padding: 8px 16px;
+  margin-bottom: 8px;
+  
+  ion-searchbar {
+    --border-radius: 12px;
+    --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --background: var(--ion-color-light);
+    padding: 0;
+  }
+  
+  .search-info {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+    
+    ion-chip {
+      font-size: 13px;
+      height: 32px;
+      
+      ion-icon:last-child {
+        cursor: pointer;
+        font-size: 18px;
+        
+        &:hover {
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+  
+  .search-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    color: var(--ion-color-success);
+    font-size: 13px;
+    
+    ion-spinner {
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+/* Highlight para resultados de búsqueda */
+.match-highlight {
+  background: rgba(var(--ion-color-warning-rgb), 0.2) !important;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.match-badge {
+  margin-left: 4px;
+  font-size: 14px;
+}
+
+/* Tarjeta destacada */
+.task-card.highlight {
+  border: 2px solid var(--ion-color-success);
+  box-shadow: 0 4px 16px rgba(var(--ion-color-success-rgb), 0.3);
+}
+
+/* Ajustes para el estado vacío */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  
+  ion-icon {
+    font-size: 5rem;
+    color: var(--ion-color-medium);
+    margin-bottom: 16px;
+  }
+  
+  h4 {
+    color: var(--ion-color-medium);
+    margin-top: 16px;
+    font-weight: normal;
+  }
+  
+  p {
+    color: var(--ion-color-medium-shade);
+    margin: 8px 0 16px;
+  }
+  
+  ion-button {
+    --color: var(--ion-color-success);
+  }
+  
+  .offline-text {
+    color: var(--ion-color-warning);
+    font-size: 0.9rem;
+    margin-top: 10px;
+  }
+}
+
+/* Estilos para sucursal */
+.sucursal-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ion-color-dark);
+  margin: 8px 0;
+  padding: 6px 10px;
+  background: rgba(var(--ion-color-primary-rgb), 0.08);
+  border-radius: 6px;
+  
+  ion-icon {
+    font-size: 18px;
+  }
+  
+  strong {
+    color: var(--ion-color-primary);
+  }
+}

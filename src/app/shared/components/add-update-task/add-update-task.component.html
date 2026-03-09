@@ -1,0 +1,399 @@
+<ion-content color="light">
+  <app-header
+    [isModal]="true"
+    color="light"
+    [centerTitle]="true">
+  </app-header>
+
+  <!-- CAMPO: NOMBRE DEL TÉCNICO -->
+  <app-custom-input
+    [control]="form.controls.tecnicoNombre"
+    type="text"
+    label="Nombre del Técnico *"
+    placeholder="Ej: Pablo Fer"
+    [readonly]="true"
+    icon="person-outline"
+    [showLock]="true">
+  </app-custom-input>
+  
+  <!-- Número de orden - Obra -->
+  <app-custom-input
+    [control]="form.controls.title"
+    type="text"
+    label="Número de orden"
+    [autofocus]="true"
+    icon="document-outline">
+  </app-custom-input>
+
+  <!-- Descripción -->
+  <app-custom-input
+    [control]="form.controls.description"
+    type="textarea"
+    label="Descripción *"
+    [autoGrow]="true"
+    rows="3"
+    icon="document-text-outline">
+  </app-custom-input>
+
+  
+
+  <!-- 👇 NUEVO: CAMPO SUCURSAL CON ACORDEONES -->
+  <div class="sucursal-container">
+    <ion-item class="sucursal-label" lines="none">
+      <ion-label position="stacked">Sucursal *</ion-label>
+    </ion-item>
+    
+    <!-- Input de búsqueda -->
+    <ion-item class="search-sucursal" lines="full">
+      <ion-icon name="search-outline" slot="start" color="primary"></ion-icon>
+      <ion-input 
+        [(ngModel)]="searchSucursal"
+        (ionInput)="filterSucursales()"
+        placeholder="Buscar sucursal"
+        [ngModelOptions]="{standalone: true}"
+        clearInput>
+      </ion-input>
+      <ion-icon 
+        *ngIf="searchSucursal" 
+        name="close-circle" 
+        slot="end" 
+        (click)="searchSucursal = ''; filterSucursales()"
+        class="clear-icon">
+      </ion-icon>
+    </ion-item>
+
+    <!-- Resultados de búsqueda / Lista de sucursales -->
+    <div class="sucursales-list">
+      <!-- Si hay sucursal seleccionada, mostrarla primero -->
+      <ion-item *ngIf="form.value.sucursal" class="selected-sucursal" lines="none">
+        <ion-icon name="checkmark-circle" color="success" slot="start"></ion-icon>
+        <ion-label>
+          <h2>Sucursal seleccionada</h2>
+          <p>{{ form.value.sucursal }}</p>
+        </ion-label>
+        <ion-button fill="clear" slot="end" (click)="form.patchValue({ sucursal: '' }); searchSucursal = ''; filterSucursales()">
+          <ion-icon name="close-outline"></ion-icon>
+        </ion-button>
+      </ion-item>
+
+      <!-- Si no hay búsqueda activa, mostrar acordeones por provincia -->
+      <ng-container *ngIf="!searchSucursal">
+        <div *ngFor="let grupo of filteredSucursales; let i = index" class="sucursal-group">
+          <ion-item 
+            class="provincia-header" 
+            button 
+            (click)="toggleProvincia(i)"
+            [detail]="false">
+            <ion-icon 
+              [name]="grupo.expanded ? 'chevron-down-outline' : 'chevron-forward-outline'" 
+              slot="start">
+            </ion-icon>
+            <ion-label>
+              <h2>{{ grupo.provincia }}</h2>
+          
+            </ion-label>
+          
+          </ion-item>
+
+          <!-- Lista de sucursales (solo si está expandido) -->
+          <ion-list *ngIf="grupo.expanded" class="sucursales-sub-list">
+            <ion-item 
+              *ngFor="let sucursal of grupo.sucursales" 
+              button
+              (click)="selectSucursal(sucursal)"
+              class="sucursal-item"
+              [class.selected]="form.value.sucursal === sucursal">
+              <ion-icon name="business-outline" slot="start" color="medium"></ion-icon>
+              <ion-label>{{ sucursal }}</ion-label>
+              <ion-icon 
+                *ngIf="form.value.sucursal === sucursal" 
+                name="checkmark-circle" 
+                slot="end" 
+                color="success">
+              </ion-icon>
+            </ion-item>
+          </ion-list>
+        </div>
+      </ng-container>
+
+      <!-- Si hay búsqueda activa, mostrar resultados planos -->
+      <ng-container *ngIf="searchSucursal">
+        <div *ngFor="let grupo of filteredSucursales" class="search-results-group">
+          <div class="provincia-tag">
+            <ion-badge color="primary">{{ grupo.provincia }}</ion-badge>
+          </div>
+          <ion-list>
+            <ion-item 
+              *ngFor="let sucursal of grupo.sucursales" 
+              button
+              (click)="selectSucursal(sucursal)"
+              class="sucursal-item search-result"
+              [class.selected]="form.value.sucursal === sucursal">
+              <ion-icon name="business-outline" slot="start" color="medium"></ion-icon>
+              <ion-label>{{ sucursal }}</ion-label>
+              <ion-icon 
+                *ngIf="form.value.sucursal === sucursal" 
+                name="checkmark-circle" 
+                slot="end" 
+                color="success">
+              </ion-icon>
+            </ion-item>
+          </ion-list>
+        </div>
+        
+        <!-- Mensaje si no hay resultados -->
+        <div *ngIf="filteredSucursales.length === 0" class="no-results">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <p>No se encontraron sucursales para "{{ searchSucursal }}"</p>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- FECHA DE CREACIÓN -->
+  <ion-item class="date-picker" lines="full">
+    <ion-label position="stacked">Fecha de creación</ion-label>
+    <ion-datetime
+      [value]="selectedDate"
+      [min]="minDate"
+      [max]="maxDate"
+      (ionChange)="onDateChange($event)"
+      displayFormat="DD MMM YYYY, HH:mm"
+      pickerFormat="DD MM YYYY HH:mm"
+      cancelText="Cancelar"
+      doneText="Aceptar">
+    </ion-datetime>
+  </ion-item>
+
+  <!-- Validación de fecha -->
+  <div class="validators" *ngIf="form.controls.createdAt.errors && form.controls.createdAt.dirty">
+    <div *ngIf="form.controls.createdAt.errors?.['required']">La fecha es requerida</div>
+  </div>
+
+  <!-- ========== SECCIÓN DE TAREAS DE OBRA ========== -->
+  <ion-item class="section-header" lines="none">
+    <ion-label>
+      <h2>Pasos del trabajo</h2>
+      <p *ngIf="form.value.items?.length">Progreso: {{ getPercentage() }}%</p>
+    </ion-label>
+    <ion-button slot="end" (click)="createItem()" mode="ios" shape="round">
+      <ion-icon name="add-circle-outline" slot="icon-only"></ion-icon>
+    </ion-button>
+  </ion-item>
+
+  <!-- Barra de progreso -->
+  <ion-range [value]="getPercentage()" *ngIf="form.value.items?.length"></ion-range>
+
+  <!-- Lista de tareas reordenables -->
+  <ion-reorder-group [disabled]="false" (ionItemReorder)="handleReorder($any($event))">
+    <div *ngFor="let item of form.value.items; index as i">
+      <ion-item lines="none" class="task-item">
+        <ion-checkbox slot="start" color="success" [(ngModel)]="item.completed" [ngModelOptions]="{standalone: true}"></ion-checkbox>
+        <ion-label class="ion-text-wrap">{{ item.name }}</ion-label>
+        <ion-buttons slot="end">
+          <ion-button (click)="removeItem(i)" color="danger" fill="clear">
+            <ion-icon name="trash-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-item>
+      <ion-item class="item-reorder">
+        <ion-reorder slot="end"></ion-reorder>
+      </ion-item>
+    </div>
+  </ion-reorder-group>
+
+  <!-- Mensaje si no hay tareas -->
+  <div class="empty-message" *ngIf="!form.value.items?.length">
+    <p>No hay pasos agregados. Presiona <ion-icon name="add-circle-outline"></ion-icon> para agregar.</p>
+  </div>
+
+  <!-- ========== SECCIÓN: MATERIALES UTILIZADOS ========== -->
+  <ion-item class="section-header" lines="none" style="margin-top: 20px;">
+    <ion-label>
+      <h2>Materiales utilizados</h2>
+      <p *ngIf="form.value.materiales?.length">{{ getMaterialesResumen() }}</p>
+    </ion-label>
+  </ion-item>
+
+  <!-- Formulario para agregar material -->
+  <div class="materiales-form-section">
+    <ion-card class="material-form-card">
+      <ion-card-header>
+        <ion-card-title>Agregar material</ion-card-title>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <!-- Nombre del material -->
+        <ion-item lines="full">
+          <ion-label position="stacked">Material *</ion-label>
+          <ion-input 
+            [(ngModel)]="nuevoMaterialNombre" 
+            placeholder="Ej: Cable 2.5mm, Pintura, etc."
+            [ngModelOptions]="{standalone: true}"
+            clearInput>
+          </ion-input>
+        </ion-item>
+
+        <!-- Cantidad y Unidad en una fila -->
+        <ion-grid>
+          <ion-row>
+            <ion-col size="6">
+              <ion-item lines="full">
+                <ion-label position="stacked">Cantidad</ion-label>
+                <ion-input 
+                  type="number" 
+                  [(ngModel)]="nuevoMaterialCantidad" 
+                  min="0.1" 
+                  step="0.1"
+                  [ngModelOptions]="{standalone: true}">
+                </ion-input>
+              </ion-item>
+            </ion-col>
+            <ion-col size="6">
+              <ion-item lines="full">
+                <ion-label position="stacked">Unidad</ion-label>
+                <ion-select 
+                  [(ngModel)]="nuevoMaterialUnidad" 
+                  [ngModelOptions]="{standalone: true}"
+                  interface="action-sheet"
+                  cancelText="Cancelar">
+                  <ion-select-option *ngFor="let unidad of unidadesMedida" [value]="unidad">
+                    {{ unidad }}
+                  </ion-select-option>
+                </ion-select>
+              </ion-item>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+
+        <!-- Observación -->
+        <ion-item lines="full">
+          <ion-label position="stacked">Observación (opcional)</ion-label>
+          <ion-input 
+            [(ngModel)]="nuevoMaterialObservacion" 
+            placeholder="Ej: Marca, color, etc."
+            [ngModelOptions]="{standalone: true}"
+            clearInput>
+          </ion-input>
+        </ion-item>
+
+        <!-- Botón Agregar -->
+        <ion-button 
+          expand="block" 
+          (click)="agregarMaterial()" 
+          [disabled]="!nuevoMaterialNombre"
+          mode="ios"
+          class="ion-margin-top">
+          <ion-icon name="add-circle-outline" slot="start"></ion-icon>
+          Agregar material
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Lista de materiales agregados -->
+  <div class="materiales-list" *ngIf="form.value.materiales?.length">
+    <ion-item class="material-item" *ngFor="let material of form.value.materiales; index as i">
+      <ion-label class="ion-text-wrap">
+        <h2>
+          <ion-icon name="cube-outline" color="primary"></ion-icon>
+          {{ material.nombre }}
+        </h2>
+        <p *ngIf="material.cantidad">
+          <ion-icon name="calculator-outline"></ion-icon>
+          Cantidad: {{ material.cantidad }} {{ material.unidad }}
+        </p>
+        <p *ngIf="material.observacion">
+          <ion-icon name="chatbubble-outline"></ion-icon>
+          {{ material.observacion }}
+        </p>
+      </ion-label>
+      <ion-buttons slot="end">
+        <ion-button (click)="editarMaterial(i)" color="warning" fill="clear">
+          <ion-icon name="create-outline"></ion-icon>
+        </ion-button>
+        <ion-button (click)="eliminarMaterial(i)" color="danger" fill="clear">
+          <ion-icon name="trash-outline"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    </ion-item>
+  </div>
+
+  <!-- Mensaje si no hay materiales -->
+  <div class="empty-message" *ngIf="!form.value.materiales?.length">
+    <p>No hay materiales registrados. Agrega los materiales utilizados en el trabajo.</p>
+  </div>
+
+  <!-- ========== CHECKBOX DE TRABAJO FINALIZADO ========== -->
+  <ion-item 
+    lines="full" 
+    class="finalizada-checkbox"
+    *ngIf="isAdmin()">
+    <ion-label>
+      <h2>Trabajo finalizado</h2>
+      <p>Al marcar esta opción, la orden se moverá a finalizadas</p>
+    </ion-label>
+    <ion-checkbox 
+      slot="end" 
+      color="success" 
+      [(ngModel)]="finalizada"
+      [ngModelOptions]="{standalone: true}">
+    </ion-checkbox>
+  </ion-item>
+
+  <!-- ========== ORDEN DE TRABAJO (IMAGEN) ========== -->
+  <ion-item class="order-image-section" lines="full">
+    <ion-label position="stacked">Orden de Trabajo (Firmada)</ion-label>
+    
+    <!-- Preview de la imagen si existe -->
+    <div class="image-container" *ngIf="orderImage">
+      <div class="image-preview">
+        <img [src]="orderImage" (click)="viewCurrentImage()" alt="Orden de trabajo">
+        <div class="image-overlay" (click)="viewCurrentImage()">
+          <ion-icon name="expand"></ion-icon>
+        </div>
+      </div>
+      <div class="file-info">
+        <small>{{ orderFileName }}</small>
+        <small *ngIf="orderImagePath">({{ orderImagePath === 'camera' ? '📸 Tomada con cámara' : '📁 De galería' }})</small>
+        <br>
+        <small *ngIf="form.value.orderImageAt">
+          Cargado: {{ form.value.orderImageAt | date:'dd/MM/yyyy HH:mm' }}
+        </small>
+      </div>
+    </div>
+    
+    <!-- Botón para cargar imagen si no hay -->
+    <div class="upload-button" *ngIf="!orderImage">
+      <ion-button expand="block" fill="outline" (click)="showOrderImageOptions()" [disabled]="isUploadingImage">
+        <ion-icon slot="start" name="document-attach"></ion-icon>
+        {{ isUploadingImage ? 'Cargando...' : 'Cargar Orden Firmada' }}
+      </ion-button>
+    </div>
+    
+    <!-- Acciones si ya hay imagen -->
+    <div class="image-actions" *ngIf="orderImage">
+      <ion-button expand="block" fill="outline" (click)="showOrderImageOptions()">
+        <ion-icon slot="start" name="camera"></ion-icon>
+        Cambiar Imagen
+      </ion-button>
+    </div>
+  </ion-item>
+
+</ion-content>
+
+<ion-footer>
+  <div class="ion-text-center ion-padding">
+    <ion-button 
+      class="submit-btn" 
+      mode="ios" 
+      [disabled]="form.invalid || isUploadingImage" 
+      (click)="checkPasswordAndSubmit()" 
+      shape="round"
+      expand="block"
+      [color]="finalizada ? 'success' : 'primary'">
+      {{ task ? 'Guardar Cambios' : 'Crear Tarea'}}
+      <ion-icon *ngIf="finalizada" slot="end" name="checkmark-circle"></ion-icon>
+    </ion-button>
+  </div>
+</ion-footer>

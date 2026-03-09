@@ -1,0 +1,19 @@
+<ion-tabs>
+  <ion-tab-bar slot="bottom">
+    <ion-tab-button tab="menu">
+      <ion-icon name="home-outline"></ion-icon>
+      <ion-label>Inicio</ion-label>
+    </ion-tab-button>
+    
+    <!-- 👇 PESTAÑA DE FINALIZADAS - AHORA USA EL MÉTODO -->
+    <ion-tab-button tab="finalizadas" (click)="checkPasswordForFinalizadas($event)">
+      <ion-icon name="checkmark-done-outline"></ion-icon>
+      <ion-label>Finalizadas</ion-label>
+    </ion-tab-button>
+    
+    <ion-tab-button tab="profile">
+      <ion-icon name="person-outline"></ion-icon>
+      <ion-label>Perfil</ion-label>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-tabs>
