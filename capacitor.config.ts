@@ -6,10 +6,10 @@ const config: CapacitorConfig = {
   webDir: 'www',
   plugins: {
     LiveUpdates: {
-      appId: 'b05ebefd',
-      channel: 'production',
-      autoUpdateMethod: 'auto',
-      enabled: true
+      appId: 'b05ebefd',      // ✅ Este debe ser tu App ID de Appflow
+      channel: 'production',   // ✅ El canal debe coincidir
+      autoUpdateMethod: 'auto', // ✅ Para actualización automática
+      enabled: true            // ✅ Importante!
     }
   }
 };
