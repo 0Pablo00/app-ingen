@@ -41,10 +41,10 @@
       </div>
     </div>
     
-    <!-- Loader inicial -->
+    <!-- Loader inicial - MODIFICADO: más grande y con color -->
     <div class="loading-indicator" *ngIf="loading && tasks.length === 0">
-      <ion-spinner name="crescent"></ion-spinner>
-      <p>Cargando tareas finalizadas...</p>
+      <ion-spinner name="crescent" color="success" class="large-spinner"></ion-spinner>
+      <p class="loading-text">Cargando tareas finalizadas...</p>
     </div>
     
     <!-- Contador de tareas (solo si no hay búsqueda) -->
