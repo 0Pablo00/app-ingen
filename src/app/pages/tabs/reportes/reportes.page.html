@@ -1,0 +1,131 @@
+<app-header color="danger"   title="Reportes Mensuales">
+
+  
+</app-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+  
+  <!-- Selector de mes -->
+  <ion-card class="selector-card">
+    <ion-card-header>
+      <ion-card-title>📅 Seleccionar Mes</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label position="stacked">Mes del reporte</ion-label>
+        <ion-select [(ngModel)]="mesSeleccionado" interface="popover" placeholder="Elegí un mes">
+          <ion-select-option *ngFor="let mes of meses" [value]="mes.value">
+            {{ mes.label }}
+          </ion-select-option>
+        </ion-select>
+      </ion-item>
+      <ion-button expand="block" (click)="cargarReporteMensual()" [disabled]="loading" class="ion-margin-top">
+        <ion-icon name="bar-chart-outline" slot="start"></ion-icon>
+        {{ loading ? 'Cargando...' : 'Cargar reporte mensual' }}
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Reporte de sucursales (se muestra solo si ya se cargó) -->
+  <div *ngIf="reporteCargado">
+    <ion-card class="stats-card">
+      <ion-card-header>
+        <ion-card-title>Sucursales:</ion-card-title>
+        <ion-card-subtitle>{{ getNombreMes() }}</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list lines="full" class="ranking-list">
+          <!-- Sucursal con acordeón -->
+          <div *ngFor="let suc of sucursalesReporte; let i = index">
+            <ion-item class="ranking-item" (click)="toggleSucursal(i)" button detail="false">
+              <ion-label>
+                <h2>{{ i+1 }}. {{ suc.nombre }}</h2>
+              </ion-label>
+              <ion-badge color="secondary" slot="end">{{ suc.cantidad }} trabajo{{ suc.cantidad !== 1 ? 's' : '' }}</ion-badge>
+            </ion-item>
+            <!-- Detalle expandible -->
+            <div *ngIf="suc.expanded" class="sucursal-detalle">
+              <ion-list class="detalle-list">
+                <ion-item *ngFor="let task of suc.tareas" class="detalle-item" lines="inset">
+                  <ion-label>
+                    <p><strong>👤 Técnico:</strong> {{ task.tecnicoNombre || 'Sin técnico' }}</p>
+                    <p><strong>📅 Fecha:</strong> {{ task.createdAt | date:'dd/MM/yyyy' }}</p>
+                     <p><strong>🔢 N° Orden:</strong> 
+      <ion-text color="primary" style="cursor: pointer; text-decoration: underline;" (click)="verDetalleTarea(task)">
+        {{ task.orderNumber || 'N/A' }}
+      </ion-text>
+    </p>
+
+                  </ion-label>
+                </ion-item>
+              </ion-list>
+            </div>
+          </div>
+          <ion-item *ngIf="sucursalesReporte.length === 0">
+            <ion-label class="ion-text-center">No hay trabajos en este mes</ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Total de trabajos -->
+    <ion-card class="total-card">
+      <ion-card-header>
+        <ion-card-title>📊 Total de trabajos realizados</ion-card-title>
+      </ion-card-header>
+      <ion-card-content class="total-content">
+        <div class="total-number">{{ totalTrabajos }}</div>
+        <div class="total-label">trabajo{{ totalTrabajos !== 1 ? 's' : '' }} en el mes</div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Botón para reporte por operarios -->
+    <ion-button expand="block" fill="outline" (click)="mostrarOperarios = !mostrarOperarios" class="operarios-toggle">
+      <ion-icon name="people-outline" slot="start"></ion-icon>
+      {{ mostrarOperarios ? 'Ocultar' : 'Ver' }} trabajos por operarios
+    </ion-button>
+
+    <!-- Lista de operarios (colapsable) -->
+    <div *ngIf="mostrarOperarios">
+      <ion-card class="operarios-card">
+        <ion-card-header>
+          <ion-card-title>👥 Rendimiento por operario</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <ion-list lines="full">
+            <ion-item *ngFor="let op of operarios">
+              <ion-label>
+                <h3>{{ op.nombre }}</h3>
+              </ion-label>
+              <ion-badge color="tertiary" slot="end">{{ op.cantidad }} trabajo{{ op.cantidad !== 1 ? 's' : '' }}</ion-badge>
+              <ion-button fill="clear" slot="end" (click)="verDetalleOperario(op.nombre)">
+                <ion-icon name="calendar-outline" slot="icon-only"></ion-icon>
+              </ion-button>
+            </ion-item>
+            <ion-item *ngIf="operarios.length === 0">
+              <ion-label class="ion-text-center">No hay operarios con tareas en este mes</ion-label>
+            </ion-item>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+  <!-- Estado sin reporte -->
+  <div *ngIf="!reporteCargado && !loading" class="empty-state">
+  <ion-icon name="document-text-outline" class="empty-icon"></ion-icon>
+  <h3>Seleccioná un mes y presioná "Cargar reporte"</h3>
+  <p *ngIf="errorMensaje" class="error-message">{{ errorMensaje }}</p>
+  <ion-button *ngIf="errorMensaje" fill="outline" (click)="cargarReporteMensual()" class="retry-button">
+    <ion-icon name="refresh-outline" slot="start"></ion-icon>
+    Reintentar
+  </ion-button>
+</div>
+
+  <!-- Spinner de carga -->
+  <div *ngIf="loading" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+     <p>{{ loadingMessage || 'Cargando reporte...' }}</p>
+  </div>
+
+</ion-content>

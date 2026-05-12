@@ -3,7 +3,8 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import {
   ItemReorderEventDetail,
   ActionSheetController,
-  ModalController
+  ModalController,
+  AlertController
 } from '@ionic/angular';
 
 import { Item, Task, Material } from 'src/app/models/task.model';
@@ -13,8 +14,10 @@ import { UtilsService } from 'src/app/services/utils.service';
 import { AuthService } from 'src/app/services/auth.service';
 import { PasswordModalComponent } from 'src/app/shared/components/password-modal/password-modal.component';
 import { ImageModalComponent } from 'src/app/components/image-modal/image-modal.component';
+import { MaterialSucursal } from 'src/app/models/insumo.model';
 
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
 
 @Component({
   selector: 'app-add-update-task',
@@ -23,8 +26,15 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 })
 export class AddUpdateTaskComponent implements OnInit {
 
+  isIOSWeb(): boolean {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIOS = /iphone|ipad|ipod/.test(userAgent);
+    const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform();
+    return isIOS && !isNative;
+  }
+
   @Input() task!: Task;
-  isTecnicoReadOnly: boolean = false; // Campo de solo lectura para técnico
+  isTecnicoReadOnly: boolean = false;
   user = {} as User;
 
   selectedDate!: string;
@@ -36,40 +46,46 @@ export class AddUpdateTaskComponent implements OnInit {
   orderFileName = '';
   isUploadingImage = false;
   
-  // Campo para trabajo finalizado
   finalizada: boolean = false;
   isOnline: boolean = navigator.onLine;
 
-  // Control para el campo de material
+  // Variables para materiales (manuales / nuevos)
   nuevoMaterialNombre: string = '';
   nuevoMaterialCantidad: number = 1;
   nuevoMaterialUnidad: string = 'unidad';
   nuevoMaterialObservacion: string = '';
+  editandoMaterialIndex: number | null = null;
 
-  // 👇 NUEVO: Lista de sucursales agrupadas por provincia con control de expansión
+  // Variables para materiales desde stock
+  materialesDisponibles: MaterialSucursal[] = [];
+
+  // Control de UI y consumo
+  mostrarOpcionesAgregarMateriales: boolean = true;
+  materialesOriginales: Material[] = []; // copia de los materiales al cargar la tarea
+
   sucursalesPorProvincia = [
     {
       provincia: 'Mendoza',
-      expanded: false, // Mendoza empieza expandido
+      expanded: false,
       sucursales: [
-        'ALGARROBAL', 'AMIGONERA', 'AVELLANEDA', 'BARRIALES', 'BELTRAN',
-'BUENA NUEVA', 'CANO', 'CAPILLA DEL ROSARIO', 'CARRODILLA', 'CASTELLI',
-'CATITAS', 'CENTRAL', 'CERVANTES', 'COLONIA', 'CORRALITO',
-'CORREA SAA', 'COSTA DE ARAUJO', 'COVIMET', 'DON BOSCO', 'DOVIR',
-'EL BOSQUE', 'EL CISNE', 'EL PIDIO', 'ESTACION', 'ESTANZUELA',
-'FAUSTINO', 'FRIMI 2', 'GIOL', 'GUTEMBERG', 'INDEPENDENCIA',
-'JARDIN SERRANO', 'JUAN B JUSTO', 'JUNIN', 'LAVALLE', 'LUJAN',
-'LUZURIAGA', 'MARINI', 'MARTIN FIERRO', 'MOYANO', 'NUEVO DORREGO',
-'OLASCOAGA', 'PADDLE', 'PADRE LLORENS', 'PALMIRA', 'PEDRIEL',
-'PEDRO MOLINA', 'PERITO MORENO', 'PERU', 'RAIZ', 'RIVADAVIA 2',
-'RIVADAVIA 3', 'RODEO DEL MEDIO', 'ROTONDA', 'SAN MIGUEL', 'SANTA ANA',
-'SOMECA', 'SPORTMAN', 'TERMINAL', 'TROME', 'TROPERO SOSA',
-'TULUMAYA', 'UNIMED', 'VISTALBA'
+        'ALGARROBAL', 'AMIGORENA', 'AVELLANEDA', 'BARRIALES', 'BELTRAN',
+        'BUENA NUEVA', 'CANO', 'CAPILLA DEL ROSARIO', 'CARRODILLA', 'CASTELLI',
+        'CATITAS', 'CENTRAL', 'CERVANTES', 'COLONIA', 'CORRALITO',
+        'CORREA SAA', 'COSTA DE ARAUJO', 'COVIMET', 'DON BOSCO', 'DOVIR',
+        'EL BOSQUE', 'EL CISNE', 'EL PIDIO', 'ESTACION', 'ESTANZUELA',
+        'FAUSTINO', 'FRIMI 2', 'GIOL', 'GUTEMBERG', 'INDEPENDENCIA',
+        'JARDIN SERRANO', 'JUAN B JUSTO', 'JUNIN', 'LAVALLE', 'LUJAN',
+        'LUZURIAGA', 'MARINI', 'MARTIN FIERRO', 'MOYANO', 'NUEVO DORREGO',
+        'OLASCOAGA', 'PADDLE', 'PADRE LLORENS', 'PALMIRA', 'PEDRIEL',
+        'PEDRO MOLINA', 'PERITO MORENO', 'PERU', 'RAIZ', 'RIVADAVIA 2',
+        'RIVADAVIA 3', 'RODEO DEL MEDIO', 'ROTONDA', 'SAN MIGUEL', 'SANTA ANA',
+        'SOMECA', 'SPORTMAN', 'TERMINAL', 'TROME', 'TROPERO SOSA',
+        'TULUMAYA', 'UNIMED', 'VISTALBA'
       ]
     },
     {
       provincia: 'San Juan',
-      expanded: false, // San Juan empieza colapsado
+      expanded: false,
       sucursales: [
         'CAUCETE', 'CHIMBAS', 'CONCEPCION', 'GRANADEROS', 'LA ROSA',
         'MEDIA AGUA', 'POCITO', 'RAWSON', 'SANTA LUCIA', 'ZONDA 4'
@@ -77,7 +93,6 @@ export class AddUpdateTaskComponent implements OnInit {
     }
   ];
 
-  // 👇 NUEVO: Control para el buscador de sucursales
   searchSucursal: string = '';
   filteredSucursales: { provincia: string; expanded: boolean; sucursales: string[] }[] = [];
 
@@ -90,25 +105,16 @@ export class AddUpdateTaskComponent implements OnInit {
     orderImagePath: new FormControl(''),
     orderFileName: new FormControl(''),
     orderImageAt: new FormControl<string | null>(null),
-    
-    // NUEVOS CAMPOS
     tecnicoNombre: new FormControl('', [Validators.required, Validators.minLength(3)]),
     materiales: new FormControl<Material[]>([]),
-    sucursal: new FormControl('', [Validators.required]) // 👈 NUEVO CAMPO SUCURSAL
+    sucursal: new FormControl('', [Validators.required])
   });
 
-  // Opciones para unidades de medida
   unidadesMedida: string[] = [
-    'unidad', 'unidades',
-    'metro', 'metros',
-    'kilogramo', 'kilogramos',
-    'litro', 'litros',
-    'caja', 'cajas',
-    'paquete', 'paquetes',
-    'bolsa', 'bolsas',
-    'metro cuadrado', 'metros cuadrados',
-    'hora', 'horas',
-    'día', 'días'
+    'unidad', 'unidades', 'metro', 'metros', 'kilogramo', 'kilogramos',
+    'litro', 'litros', 'caja', 'cajas', 'paquete', 'paquetes',
+    'bolsa', 'bolsas', 'metro cuadrado', 'metros cuadrados',
+    'hora', 'horas', 'día', 'días'
   ];
 
   constructor(
@@ -116,7 +122,8 @@ export class AddUpdateTaskComponent implements OnInit {
     private utilsSvc: UtilsService,
     private authSvc: AuthService,
     private modalCtrl: ModalController,
-    private actionSheetCtrl: ActionSheetController
+    private actionSheetCtrl: ActionSheetController,
+    private alertCtrl: AlertController
   ) {
     window.addEventListener('online', () => this.isOnline = true);
     window.addEventListener('offline', () => this.isOnline = false);
@@ -126,12 +133,49 @@ export class AddUpdateTaskComponent implements OnInit {
     return this.authSvc.isAdmin();
   }
 
-  // 👇 NUEVO: Filtrar sucursales por búsqueda
+  isEditMode(): boolean {
+    return !!this.task;
+  }
+
+  private necesitaPasswordParaMateriales(): boolean {
+    return this.isEditMode() && this.materialesOriginales.length > 0;
+  }
+
+  private async validarPasswordMaterial(): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      const alert = await this.alertCtrl.create({
+        header: 'Verificar contraseña',
+        message: 'Para modificar materiales de una tarea guardada, ingrese la contraseña:',
+        inputs: [
+          {
+            name: 'password',
+            type: 'password',
+            placeholder: 'Contraseña',
+            attributes: { maxlength: 10 }
+          }
+        ],
+        buttons: [
+          { text: 'Cancelar', role: 'cancel', handler: () => resolve(false) },
+          {
+            text: 'Confirmar',
+            handler: (data) => {
+              if (data.password === '0140') {
+                resolve(true);
+              } else {
+                this.utilsSvc.presentToast({ message: 'Contraseña incorrecta', color: 'danger', duration: 2000 });
+                resolve(false);
+              }
+            }
+          }
+        ]
+      });
+      await alert.present();
+    });
+  }
+
   filterSucursales() {
     const term = this.searchSucursal.toLowerCase().trim();
-    
     if (!term) {
-      // Restaurar la estructura original con los estados expandidos
       this.filteredSucursales = this.sucursalesPorProvincia.map(grupo => ({
         provincia: grupo.provincia,
         expanded: grupo.expanded,
@@ -139,44 +183,38 @@ export class AddUpdateTaskComponent implements OnInit {
       }));
       return;
     }
-
     this.filteredSucursales = this.sucursalesPorProvincia
       .map(grupo => ({
         provincia: grupo.provincia,
-        expanded: true, // En búsqueda, mostrar todos expandidos
-        sucursales: grupo.sucursales.filter(s => 
-          s.toLowerCase().includes(term)
-        )
+        expanded: true,
+        sucursales: grupo.sucursales.filter(s => s.toLowerCase().includes(term))
       }))
       .filter(grupo => grupo.sucursales.length > 0);
   }
 
-  // 👇 NUEVO: Seleccionar sucursal
   selectSucursal(sucursal: string) {
     this.form.patchValue({ sucursal });
-    this.searchSucursal = ''; // Limpiar búsqueda
+    this.searchSucursal = '';
     this.filteredSucursales = this.sucursalesPorProvincia.map(grupo => ({
       provincia: grupo.provincia,
       expanded: grupo.expanded,
       sucursales: [...grupo.sucursales]
     }));
+    if (this.mostrarOpcionesAgregarMateriales) {
+      this.cargarMaterialesSucursal(sucursal);
+    }
   }
 
-  // 👇 NUEVO: Expandir/colapsar provincia
   toggleProvincia(index: number) {
-    if (!this.searchSucursal) { // Solo permitir toggle cuando no hay búsqueda
+    if (!this.searchSucursal) {
       this.filteredSucursales[index].expanded = !this.filteredSucursales[index].expanded;
-      // También actualizar el estado en sucursalesPorProvincia para mantener consistencia
       this.sucursalesPorProvincia[index].expanded = this.filteredSucursales[index].expanded;
     }
   }
 
   async ngOnInit() {
     this.user = this.utilsSvc.getElementFromLocalStorage('user');
-
-    if (!this.task) {
-      this.finalizada = false;
-    }
+    if (!this.task) this.finalizada = false;
 
     const now = new Date();
     this.minDate = this.formatDateForDateTimePicker(now);
@@ -184,7 +222,6 @@ export class AddUpdateTaskComponent implements OnInit {
     max.setFullYear(now.getFullYear() + 1);
     this.maxDate = this.formatDateForDateTimePicker(max);
 
-    // Inicializar lista filtrada
     this.filteredSucursales = this.sucursalesPorProvincia.map(grupo => ({
       provincia: grupo.provincia,
       expanded: grupo.expanded,
@@ -192,7 +229,9 @@ export class AddUpdateTaskComponent implements OnInit {
     }));
 
     if (this.task) {
-      // Es edición - cargar datos existentes
+      // Guardar copia de los materiales originales
+      this.materialesOriginales = JSON.parse(JSON.stringify(this.task.materiales || []));
+
       const taskData = {
         title: this.task.title || '',
         description: this.task.description || '',
@@ -204,38 +243,38 @@ export class AddUpdateTaskComponent implements OnInit {
         orderImageAt: this.convertToIsoString(this.task.orderImageAt),
         tecnicoNombre: this.task.tecnicoNombre || '',
         materiales: this.task.materiales || [],
-        sucursal: this.task.sucursal || '' // 👈 CARGAR SUCURSAL
+        sucursal: this.task.sucursal || ''
       };
-
       this.form.patchValue(taskData);
       this.finalizada = this.task.finalizada || false;
       this.orderImage = this.task.orderImage || '';
       this.orderImagePath = this.task.orderImagePath || '';
       this.orderFileName = this.task.orderFileName || '';
       this.selectedDate = this.formatDateForInput(this.task.createdAt);
-      
-      // En edición TAMBIÉN debe ser readonly para técnico
       this.isTecnicoReadOnly = true;
-      
+
+      // Decidir si mostrar opciones para agregar materiales
+      if (this.materialesOriginales.length === 0) {
+        this.mostrarOpcionesAgregarMateriales = true;
+        if (this.task.sucursal) {
+          this.cargarMaterialesSucursal(this.task.sucursal);
+        }
+      } else {
+        this.mostrarOpcionesAgregarMateriales = false;
+      }
     } else {
-      // Es NUEVA tarea - AUTCOMPLETAR con el nombre del usuario logueado
+      // Modo creación: siempre mostrar opciones
+      this.mostrarOpcionesAgregarMateriales = true;
       const now = new Date();
       this.selectedDate = this.formatDateForDateTimePicker(now);
-      
-      // Autocompletar el nombre del técnico
       const tecnicoNombre = this.user?.name || '';
-      console.log('👤 Autocompletando técnico con:', tecnicoNombre);
-      
       this.form.patchValue({
         createdAt: now.toISOString(),
         materiales: [],
         tecnicoNombre: tecnicoNombre,
-        sucursal: '' // Inicializar vacío
+        sucursal: ''
       });
-      
-      // Activar modo solo lectura para el técnico
       this.isTecnicoReadOnly = true;
-
       if (tecnicoNombre) {
         setTimeout(() => {
           this.utilsSvc.presentToast({
@@ -246,69 +285,183 @@ export class AddUpdateTaskComponent implements OnInit {
         }, 500);
       }
     }
-  }
 
-  convertToIsoString(date: string | Date | null | undefined): string {
-    if (!date) return '';
-    try {
-      if (typeof date === 'string') {
-        const dateObj = new Date(date);
-        return isNaN(dateObj.getTime()) ? '' : dateObj.toISOString();
-      } else {
-        return date.toISOString();
-      }
-    } catch (error) {
-      console.error('Error convirtiendo fecha:', error);
-      return '';
+    if (this.mostrarOpcionesAgregarMateriales) {
+      this.form.get('sucursal')?.valueChanges.subscribe(sucursal => {
+        if (sucursal) {
+          this.cargarMaterialesSucursal(sucursal);
+        } else {
+          this.materialesDisponibles = [];
+        }
+      });
     }
   }
 
-  onDateChange(ev: any) {
-    const localDateString = ev.detail.value;
-    const localDate = new Date(localDateString);
-    this.form.patchValue({
-      createdAt: localDate.toISOString()
+  // ========== MÉTODOS PARA MATERIALES DESDE STOCK ==========
+  async cargarMaterialesSucursal(sucursal: string) {
+    if (!this.mostrarOpcionesAgregarMateriales) return;
+    try {
+      const ownerUid = this.authSvc.getTasksOwnerUid();
+      this.materialesDisponibles = await this.firebaseSvc.getSucursalStock(ownerUid, sucursal);
+    } catch (error) {
+      console.error('Error cargando stock de sucursal', error);
+    }
+  }
+
+  async agregarMaterialDesdeStock() {
+    if (!this.mostrarOpcionesAgregarMateriales) return;
+    if (!this.form.value.sucursal) {
+      this.utilsSvc.presentToast({ message: 'Primero selecciona una sucursal', color: 'warning', duration: 2000 });
+      return;
+    }
+    if (this.materialesDisponibles.length === 0) {
+      this.utilsSvc.presentToast({ message: 'No hay materiales disponibles en esta sucursal', color: 'medium', duration: 2000 });
+      return;
+    }
+
+    const actionSheet = await this.actionSheetCtrl.create({
+      header: 'Seleccionar material',
+      buttons: [
+        ...this.materialesDisponibles.map(mat => ({
+          text: `${mat.nombre} (${mat.cantidad} ${mat.unidad})`,
+          handler: () => this.promptCantidadDesdeStock(mat)
+        })),
+        { text: 'Cancelar', role: 'cancel' }
+      ]
     });
+    await actionSheet.present();
   }
 
-  formatDateForDateTimePicker(date: Date): string {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  async promptCantidadDesdeStock(material: MaterialSucursal) {
+    if (!this.mostrarOpcionesAgregarMateriales) return;
+    const alert = await this.alertCtrl.create({
+      header: `Usar ${material.nombre}`,
+      subHeader: `Stock en sucursal: ${material.cantidad} ${material.unidad}`,
+      inputs: [
+        {
+          name: 'cantidad',
+          type: 'number',
+          placeholder: `Cantidad (${material.unidad})`,
+          min: 0.1,
+         
+        }
+      ],
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Agregar',
+          handler: async (data) => {
+            const cantidad = +data.cantidad;
+            if (!cantidad || cantidad <= 0) {
+              this.utilsSvc.presentToast({ message: 'Cantidad inválida', color: 'warning' });
+              return;
+            }
+            if (cantidad > material.cantidad) {
+              this.utilsSvc.presentToast({ message: `Solo hay ${material.cantidad} ${material.unidad}`, color: 'danger' });
+              return;
+            }
+            const nuevoMaterial: Material = {
+              insumoId: material.insumoId,
+              nombre: material.nombre,
+              cantidad: cantidad,
+              unidad: material.unidad,
+              observacion: `Consumo desde orden #${this.form.value.title || 'nueva'}`
+            };
+            const materialesActuales = this.form.value.materiales || [];
+            this.form.patchValue({ materiales: [...materialesActuales, nuevoMaterial] });
+            this.utilsSvc.presentToast({ message: 'Material agregado (se descontará al guardar)', color: 'success', duration: 2000 });
+            this.cargarMaterialesSucursal(this.form.value.sucursal!);
+          }
+        }
+      ]
+    });
+    await alert.present();
   }
 
-  formatDateForInput(date: string | Date | undefined): string {
-    if (!date) {
-      const now = new Date();
-      return this.formatDateForDateTimePicker(now);
+  // ========== MÉTODOS PARA MATERIALES MANUALES ==========
+  resetMaterialForm() {
+    this.nuevoMaterialNombre = '';
+    this.nuevoMaterialCantidad = 1;
+    this.nuevoMaterialUnidad = 'unidad';
+    this.nuevoMaterialObservacion = '';
+    this.editandoMaterialIndex = null;
+  }
+
+  async editarMaterial(index: number) {
+    const material = this.form.value.materiales?.[index];
+    if (!material) return;
+    if (this.necesitaPasswordParaMateriales()) {
+      const ok = await this.validarPasswordMaterial();
+      if (!ok) return;
     }
-    try {
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      if (isNaN(dateObj.getTime())) {
-        const now = new Date();
-        return this.formatDateForDateTimePicker(now);
-      }
-      return this.formatDateForDateTimePicker(dateObj);
-    } catch (error) {
-      console.error('Error formateando fecha:', error);
-      const now = new Date();
-      return this.formatDateForDateTimePicker(now);
+    this.nuevoMaterialNombre = material.nombre;
+    this.nuevoMaterialCantidad = material.cantidad || 1;
+    this.nuevoMaterialUnidad = material.unidad || 'unidad';
+    this.nuevoMaterialObservacion = material.observacion || '';
+    this.editandoMaterialIndex = index;
+    setTimeout(() => {
+      const element = document.querySelector('.materiales-form-section');
+      if (element) element.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }
+
+  async eliminarMaterial(index: number) {
+    if (this.necesitaPasswordParaMateriales()) {
+      const ok = await this.validarPasswordMaterial();
+      if (!ok) return;
+    }
+    const materialesActuales = this.form.value.materiales || [];
+    materialesActuales.splice(index, 1);
+    this.form.patchValue({ materiales: materialesActuales });
+    this.utilsSvc.presentToast({ message: 'Material eliminado', color: 'warning', duration: 1500 });
+    if (this.editandoMaterialIndex === index) {
+      this.resetMaterialForm();
+    } else if (this.editandoMaterialIndex !== null && this.editandoMaterialIndex > index) {
+      this.editandoMaterialIndex--;
     }
   }
 
-  // ========== MÉTODOS PARA TAREAS (ITEMS) ==========
+  async agregarMaterialManual() {
+    if (!this.mostrarOpcionesAgregarMateriales) return;
+    if (!this.nuevoMaterialNombre || !this.nuevoMaterialNombre.trim()) {
+      this.utilsSvc.presentToast({ message: '⚠️ Debes ingresar el nombre del material', color: 'warning', duration: 2000 });
+      return;
+    }
+
+    const nuevo: Material = {
+      nombre: this.nuevoMaterialNombre.trim(),
+      cantidad: this.nuevoMaterialCantidad || 1,
+      unidad: this.nuevoMaterialUnidad || 'unidad',
+      observacion: this.nuevoMaterialObservacion?.trim() || ''
+    };
+
+    const materialesActuales = this.form.value.materiales || [];
+
+    if (this.editandoMaterialIndex !== null) {
+      materialesActuales[this.editandoMaterialIndex] = nuevo;
+      this.form.patchValue({ materiales: materialesActuales });
+      this.utilsSvc.presentToast({ message: '✅ Material actualizado', color: 'success', duration: 1500 });
+      this.resetMaterialForm();
+    } else {
+      this.form.patchValue({ materiales: [...materialesActuales, nuevo] });
+      this.utilsSvc.presentToast({ message: '✅ Material agregado', color: 'success', duration: 1500 });
+      this.resetMaterialForm();
+    }
+  }
+
+  getMaterialesResumen(): string {
+    const materiales = this.form.value.materiales || [];
+    if (materiales.length === 0) return 'Sin materiales registrados';
+    const totalItems = materiales.length;
+    const totalCantidad = materiales.reduce((sum, m) => sum + (m.cantidad || 0), 0);
+    return `${totalItems} material(es) - Total: ${totalCantidad} ${materiales[0]?.unidad || 'unidades'}`;
+  }
+
+  // ========== MÉTODOS PARA TAREAS ==========
   createItem() {
     this.utilsSvc.presentAlert({
       header: 'Nueva tarea',
-      inputs: [{ 
-        name: 'name', 
-        type: 'textarea', 
-        placeholder: 'Detalle de la tarea...',
-        attributes: { maxlength: 200 }
-      }],
+      inputs: [{ name: 'name', type: 'textarea', placeholder: 'Detalle de la tarea...', attributes: { maxlength: 200 } }],
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
         {
@@ -345,175 +498,199 @@ export class AddUpdateTaskComponent implements OnInit {
     return Math.round((completed / items.length) * 100);
   }
 
-  // ========== MÉTODOS PARA MATERIALES ==========
-  agregarMaterial() {
-    if (!this.nuevoMaterialNombre || !this.nuevoMaterialNombre.trim()) {
-      this.utilsSvc.presentToast({
-        message: '⚠️ Debes ingresar el nombre del material',
-        color: 'warning',
-        duration: 2000
-      });
-      return;
-    }
+  // ========== CONSUMO DE MATERIALES DEL STOCK ==========
+  private async consumirMaterialesStock() {
+    // Solo consumir si:
+    // - Es modo creación, o
+    // - Es modo edición pero originalmente no había materiales
+    const debeConsumir = !this.isEditMode() || (this.isEditMode() && this.materialesOriginales.length === 0);
+    if (!debeConsumir) return;
 
-    const nuevoMaterial: Material = {
-      nombre: this.nuevoMaterialNombre.trim(),
-      cantidad: this.nuevoMaterialCantidad || 1,
-      unidad: this.nuevoMaterialUnidad || 'unidad',
-      observacion: this.nuevoMaterialObservacion?.trim() || ''
-    };
-
-    const materialesActuales = this.form.value.materiales || [];
-    this.form.patchValue({ materiales: [...materialesActuales, nuevoMaterial] });
-    this.resetMaterialForm();
-
-    this.utilsSvc.presentToast({
-      message: '✅ Material agregado',
-      color: 'success',
-      duration: 1500
-    });
-  }
-
-  eliminarMaterial(index: number) {
-    const materialesActuales = this.form.value.materiales || [];
-    materialesActuales.splice(index, 1);
-    this.form.patchValue({ materiales: materialesActuales });
-    this.utilsSvc.presentToast({
-      message: 'Material eliminado',
-      color: 'warning',
-      duration: 1500
-    });
-  }
-
-  editarMaterial(index: number) {
-    const material = this.form.value.materiales?.[index];
-    if (!material) return;
-
-    this.nuevoMaterialNombre = material.nombre;
-    this.nuevoMaterialCantidad = material.cantidad || 1;
-    this.nuevoMaterialUnidad = material.unidad || 'unidad';
-    this.nuevoMaterialObservacion = material.observacion || '';
-
-    this.eliminarMaterial(index);
-
-    setTimeout(() => {
-      const element = document.querySelector('.materiales-form-section');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
-  }
-
-  resetMaterialForm() {
-    this.nuevoMaterialNombre = '';
-    this.nuevoMaterialCantidad = 1;
-    this.nuevoMaterialUnidad = 'unidad';
-    this.nuevoMaterialObservacion = '';
-  }
-
-  getMaterialesResumen(): string {
     const materiales = this.form.value.materiales || [];
-    if (materiales.length === 0) return 'Sin materiales registrados';
-    const totalItems = materiales.length;
-    const totalCantidad = materiales.reduce((sum, m) => sum + (m.cantidad || 0), 0);
-    return `${totalItems} material(es) - Total: ${totalCantidad} ${materiales[0]?.unidad || 'unidades'}`;
+    const sucursal = this.form.value.sucursal;
+    if (!sucursal) return;
+    const ordenNumero = this.form.value.title;
+
+    for (const mat of materiales) {
+      if (mat.insumoId) {
+        try {
+          await this.firebaseSvc.usarMaterialEnSucursal(
+            this.authSvc.getTasksOwnerUid(),
+            sucursal,
+            mat.insumoId,
+            mat.cantidad!,
+            ordenNumero,
+            `Consumo en orden de trabajo ${ordenNumero}`
+          );
+        } catch (error) {
+          console.error(`Error consumiendo material ${mat.nombre}:`, error);
+          this.utilsSvc.presentToast({ message: `Error al consumir ${mat.nombre}`, color: 'danger', duration: 2000 });
+        }
+      }
+    }
   }
 
-  // ========== MÉTODOS PARA IMÁGENES ==========
+  // ========== MÉTODOS PARA IMÁGENES (completos, no modificados) ==========
+  compressImage(dataUrl: string, maxWidth: number = 800, quality: number = 0.7): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      };
+      img.onerror = (err) => reject(err);
+      img.src = dataUrl;
+    });
+  }
+
   async showOrderImageOptions() {
     const buttons: any[] = [
       { text: 'Tomar Foto', icon: 'camera', handler: () => this.takePhoto() },
       { text: 'Galería', icon: 'images', handler: () => this.selectFromGallery() },
       { text: 'Cancelar', role: 'cancel' }
     ];
-
     if (this.orderImage) {
       buttons.splice(2, 0,
         { text: 'Ver Imagen', icon: 'eye', handler: () => this.viewCurrentImage() },
         { text: 'Eliminar Imagen', icon: 'trash', role: 'destructive', handler: () => this.removeImage() }
       );
     }
-
-    const sheet = await this.actionSheetCtrl.create({
-      header: 'Orden de trabajo',
-      buttons
-    });
+    const sheet = await this.actionSheetCtrl.create({ header: 'Orden de trabajo', buttons });
     await sheet.present();
   }
 
   async takePhoto() {
-    try {
-      const img = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Camera,
-        width: 1024,
-        height: 1024,
-        presentationStyle: 'popover'
-      });
-      this.processImageWithSizeCheck(img.dataUrl!, 'camera');
-    } catch (error) {
-      console.error('Error tomando foto:', error);
-      this.utilsSvc.presentToast({
-        message: 'Error al tomar la foto',
-        color: 'danger',
-        duration: 3000
-      });
+    if (this.isIOSWeb()) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment';
+      input.onchange = async (event: Event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        await this.utilsSvc.presentLoading({ message: 'Procesando imagen...' });
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const dataUrl = e.target?.result as string;
+          const compressed = await this.compressImage(dataUrl, 800, 0.7);
+          const sizeMB = this.getDataUrlSizeInMB(compressed);
+          if (sizeMB > 0.95) {
+            const moreCompressed = await this.compressImage(dataUrl, 600, 0.5);
+            this.saveImage(moreCompressed, 'camera', this.getDataUrlSizeInMB(moreCompressed));
+          } else {
+            this.saveImage(compressed, 'camera', sizeMB);
+          }
+          await this.utilsSvc.dismissLoading();
+        };
+        reader.onerror = async () => {
+          await this.utilsSvc.dismissLoading();
+          this.utilsSvc.presentToast({ message: 'Error al leer la imagen', color: 'danger' });
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    } else {
+      await this.utilsSvc.presentLoading({ message: 'Procesando imagen...' });
+      try {
+        const img = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera,
+          width: 1024,
+          height: 1024,
+          presentationStyle: 'popover'
+        });
+        const compressed = await this.compressImage(img.dataUrl!, 800, 0.7);
+        const sizeMB = this.getDataUrlSizeInMB(compressed);
+        if (sizeMB > 0.95) {
+          const moreCompressed = await this.compressImage(img.dataUrl!, 600, 0.5);
+          this.saveImage(moreCompressed, 'camera', this.getDataUrlSizeInMB(moreCompressed));
+        } else {
+          this.saveImage(compressed, 'camera', sizeMB);
+        }
+        await this.utilsSvc.dismissLoading();
+      } catch (error) {
+        await this.utilsSvc.dismissLoading();
+        console.error('Error tomando foto:', error);
+        this.utilsSvc.presentToast({ message: 'Error al tomar la foto', color: 'danger', duration: 3000 });
+      }
     }
   }
 
   async selectFromGallery() {
-    try {
-      const img = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Photos,
-        width: 1024,
-        height: 1024,
-        presentationStyle: 'popover'
-      });
-      this.processImageWithSizeCheck(img.dataUrl!, 'gallery');
-    } catch (error) {
-      console.error('Error seleccionando imagen:', error);
-      this.utilsSvc.presentToast({
-        message: 'Error al seleccionar imagen',
-        color: 'danger',
-        duration: 3000
-      });
-    }
-  }
-
-  processImageWithSizeCheck(dataUrl: string, source: string) {
-    const sizeInMB = this.getDataUrlSizeInMB(dataUrl);
-    
-    if (sizeInMB > 0.95) {
-      this.utilsSvc.presentAlert({
-        header: 'Imagen demasiado grande',
-        message: `La imagen es de ${sizeInMB.toFixed(2)}MB. El límite de Firestore es 1MB.\n\n¿Quieres intentar con una configuración más reducida?`,
-        buttons: [
-          { text: 'Cancelar', role: 'cancel' },
-          {
-            text: 'Reducir tamaño',
-            handler: () => this.retryWithReducedSettings(source)
-          },
-          {
-            text: 'Usar igual (arriesgado)',
-            handler: () => this.saveImageAnyway(dataUrl, source)
+    if (this.isIOSWeb()) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async (event: Event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        await this.utilsSvc.presentLoading({ message: 'Procesando imagen...' });
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const dataUrl = e.target?.result as string;
+          const compressed = await this.compressImage(dataUrl, 800, 0.7);
+          const sizeMB = this.getDataUrlSizeInMB(compressed);
+          if (sizeMB > 0.95) {
+            const moreCompressed = await this.compressImage(dataUrl, 600, 0.5);
+            this.saveImage(moreCompressed, 'gallery', this.getDataUrlSizeInMB(moreCompressed));
+          } else {
+            this.saveImage(compressed, 'gallery', sizeMB);
           }
-        ]
-      });
-      return;
+          await this.utilsSvc.dismissLoading();
+        };
+        reader.onerror = async () => {
+          await this.utilsSvc.dismissLoading();
+          this.utilsSvc.presentToast({ message: 'Error al leer la imagen', color: 'danger' });
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    } else {
+      await this.utilsSvc.presentLoading({ message: 'Procesando imagen...' });
+      try {
+        const img = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Photos,
+          width: 1024,
+          height: 1024,
+          presentationStyle: 'popover'
+        });
+        const compressed = await this.compressImage(img.dataUrl!, 800, 0.7);
+        const sizeMB = this.getDataUrlSizeInMB(compressed);
+        if (sizeMB > 0.95) {
+          const moreCompressed = await this.compressImage(img.dataUrl!, 600, 0.5);
+          this.saveImage(moreCompressed, 'gallery', this.getDataUrlSizeInMB(moreCompressed));
+        } else {
+          this.saveImage(compressed, 'gallery', sizeMB);
+        }
+        await this.utilsSvc.dismissLoading();
+      } catch (error) {
+        await this.utilsSvc.dismissLoading();
+        console.error('Error seleccionando imagen:', error);
+        this.utilsSvc.presentToast({ message: 'Error al seleccionar imagen', color: 'danger', duration: 3000 });
+      }
     }
-    this.saveImage(dataUrl, source, sizeInMB);
   }
 
   getDataUrlSizeInMB(dataUrl: string): number {
     if (!dataUrl.includes(',')) return 0;
     const base64Data = dataUrl.split(',')[1];
-    const padding = (dataUrl.charAt(dataUrl.length - 2) === '=') ? 2 : 
-                   (dataUrl.charAt(dataUrl.length - 1) === '=') ? 1 : 0;
+    const padding = (dataUrl.charAt(dataUrl.length - 2) === '=') ? 2 : (dataUrl.charAt(dataUrl.length - 1) === '=') ? 1 : 0;
     const sizeInBytes = (base64Data.length * 3) / 4 - padding;
     return sizeInBytes / (1024 * 1024);
   }
@@ -521,148 +698,109 @@ export class AddUpdateTaskComponent implements OnInit {
   saveImage(dataUrl: string, source: string, sizeInMB?: number) {
     const now = new Date();
     const fileName = `orden_${now.getTime()}.jpg`;
-
     this.orderImage = dataUrl;
     this.orderFileName = fileName;
     this.orderImagePath = source;
-
     this.form.patchValue({
       orderImage: dataUrl,
       orderFileName: fileName,
       orderImagePath: source,
       orderImageAt: now.toISOString()
     });
-
     const sizeMsg = sizeInMB ? ` (${sizeInMB.toFixed(2)}MB)` : '';
-    this.utilsSvc.presentToast({
-      message: `Imagen cargada${sizeMsg}`,
-      color: 'success',
-      duration: 2000
-    });
-  }
-
-  saveImageAnyway(dataUrl: string, source: string) {
-    const sizeInMB = this.getDataUrlSizeInMB(dataUrl);
-    if (sizeInMB > 1.0) {
-      this.utilsSvc.presentToast({
-        message: `¡ADVERTENCIA! Imagen de ${sizeInMB.toFixed(2)}MB supera el límite de 1MB`,
-        color: 'warning',
-        duration: 4000
-      });
-    }
-    this.saveImage(dataUrl, source, sizeInMB);
-  }
-
-  async retryWithReducedSettings(source: string) {
-    try {
-      const img = await Camera.getPhoto({
-        quality: 70,
-        allowEditing: false,
-        resultType: CameraResultType.DataUrl,
-        source: source === 'camera' ? CameraSource.Camera : CameraSource.Photos,
-        width: 800,
-        height: 600,
-        presentationStyle: 'popover'
-      });
-      this.processImageWithSizeCheck(img.dataUrl!, source);
-    } catch (error) {
-      console.error('Error con configuración reducida:', error);
-      this.utilsSvc.presentToast({
-        message: 'Error al tomar foto con configuración reducida',
-        color: 'danger',
-        duration: 3000
-      });
-    }
+    this.utilsSvc.presentToast({ message: `Imagen cargada${sizeMsg}`, color: 'success', duration: 2000 });
   }
 
   removeImage() {
     this.orderImage = '';
     this.orderImagePath = '';
     this.orderFileName = '';
-    this.form.patchValue({
-      orderImage: '',
-      orderImagePath: '',
-      orderFileName: '',
-      orderImageAt: null
-    });
-    this.utilsSvc.presentToast({
-      message: 'Imagen eliminada',
-      color: 'success',
-      duration: 2000
-    });
+    this.form.patchValue({ orderImage: '', orderImagePath: '', orderFileName: '', orderImageAt: null });
+    this.utilsSvc.presentToast({ message: 'Imagen eliminada', color: 'success', duration: 2000 });
   }
 
   async viewCurrentImage() {
     const modal = await this.modalCtrl.create({
       component: ImageModalComponent,
-      componentProps: {
-        imageUrl: this.orderImage,
-        title: this.orderFileName || 'Orden de trabajo'
-      }
+      componentProps: { imageUrl: this.orderImage, title: this.orderFileName || 'Orden de trabajo' }
     });
     await modal.present();
   }
 
+  convertToIsoString(date: string | Date | null | undefined): string {
+    if (!date) return '';
+    try {
+      if (typeof date === 'string') {
+        const dateObj = new Date(date);
+        return isNaN(dateObj.getTime()) ? '' : dateObj.toISOString();
+      } else {
+        return date.toISOString();
+      }
+    } catch (error) {
+      console.error('Error convirtiendo fecha:', error);
+      return '';
+    }
+  }
+
+  onDateChange(ev: any) {
+    const localDateString = ev.detail.value;
+    const localDate = new Date(localDateString);
+    this.form.patchValue({ createdAt: localDate.toISOString() });
+  }
+
+  formatDateForDateTimePicker(date: Date): string {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
+  formatDateForInput(date: string | Date | undefined): string {
+    if (!date) return this.formatDateForDateTimePicker(new Date());
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (isNaN(dateObj.getTime())) return this.formatDateForDateTimePicker(new Date());
+      return this.formatDateForDateTimePicker(dateObj);
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return this.formatDateForDateTimePicker(new Date());
+    }
+  }
+
+  // ========== GUARDADO ==========
   async checkPasswordAndSubmit() {
     if (!this.isOnline) {
-      this.utilsSvc.presentToast({
-        message: '❌ Sin conexión. No se puede guardar.',
-        color: 'danger',
-        duration: 3000
-      });
+      this.utilsSvc.presentToast({ message: '❌ Sin conexión. No se puede guardar.', color: 'danger', duration: 3000 });
       return;
     }
-
     if (this.form.invalid) {
-      this.utilsSvc.presentToast({
-        message: '❌ Complete todos los campos requeridos',
-        color: 'danger',
-        duration: 3000
-      });
+      this.utilsSvc.presentToast({ message: '❌ Complete todos los campos requeridos', color: 'danger', duration: 3000 });
       return;
     }
-
-    const modal = await this.modalCtrl.create({
-      component: PasswordModalComponent
-    });
+    const modal = await this.modalCtrl.create({ component: PasswordModalComponent });
     await modal.present();
-
     const { data } = await modal.onWillDismiss();
     if (!data) return;
-
     const valid = ['1234', 'servicios2024', 'operario_2024'];
     if (!valid.includes(data.password)) {
       this.utilsSvc.presentToast({ message: 'Contraseña incorrecta', color: 'danger' });
       return;
     }
-
     this.submit();
   }
 
   submit() {
-    if (this.form.invalid || this.isUploadingImage) {
-      console.log('Formulario inválido:', this.form.errors);
-      return;
-    }
+    if (this.form.invalid || this.isUploadingImage) return;
     this.task ? this.updateTask() : this.createTask();
   }
 
-  // MÉTODO CREATE TASK
   async createTask() {
     await this.utilsSvc.presentLoading({ message: 'Creando tarea...' });
-    
     try {
-      console.log('🚀 ===== INICIANDO CREACIÓN DE TAREA =====');
-      const startTime = performance.now();
-      
       const ownerUid = this.authSvc.getTasksOwnerUid();
-      console.log('1️⃣ Owner UID:', ownerUid);
-      
-      const orderStart = performance.now();
       const orderNumber = await this.firebaseSvc.getNextOrderNumber(ownerUid);
-      const orderEnd = performance.now();
-      console.log(`2️⃣ Número de orden: ${orderNumber} (${(orderEnd - orderStart).toFixed(0)}ms)`);
-      
       const formData = {
         ...this.form.value,
         orderNumber,
@@ -674,53 +812,26 @@ export class AddUpdateTaskComponent implements OnInit {
         createdByEmail: this.user.email,
         tecnicoNombre: this.form.value.tecnicoNombre,
         materiales: this.form.value.materiales || [],
-        sucursal: this.form.value.sucursal // 👈 NUEVO CAMPO
+        sucursal: this.form.value.sucursal
       };
-      
-      console.log('3️⃣ Datos a guardar:', {
-        ...formData,
-        orderImage: formData.orderImage ? '[IMAGEN PRESENTE]' : null
-      });
-      
-      const addStart = performance.now();
       await this.firebaseSvc.addTask(ownerUid, formData);
-      const addEnd = performance.now();
-      console.log(`4️⃣ Tarea guardada en Firestore (${(addEnd - addStart).toFixed(0)}ms)`);
-      
-      const endTime = performance.now();
-      console.log(`✅ ===== TAREA CREADA EN ${(endTime - startTime).toFixed(0)}ms =====`);
-      
+      await this.consumirMaterialesStock();
       await this.utilsSvc.dismissLoading();
       await this.utilsSvc.dismissModal({ success: true });
-      
-      this.utilsSvc.presentToast({
-        message: '✅ Tarea creada correctamente',
-        color: 'success',
-        duration: 2000
-      });
-      
+      this.utilsSvc.presentToast({ message: '✅ Tarea creada y materiales descontados', color: 'success', duration: 2000 });
     } catch (error) {
       console.error('❌ Error en createTask:', error);
       await this.utilsSvc.dismissLoading();
-      
-      this.utilsSvc.presentToast({
-        message: 'Error al crear la tarea',
-        color: 'danger',
-        duration: 3000
-      });
+      this.utilsSvc.presentToast({ message: 'Error al crear la tarea', color: 'danger', duration: 3000 });
     }
   }
 
-  // MÉTODO UPDATE TASK
   async updateTask() {
     if (!this.task?.id) return;
-
     await this.utilsSvc.presentLoading({ message: 'Actualizando...' });
-    
     try {
       const ownerUid = this.authSvc.getTasksOwnerUid();
       const taskPath = `users/${ownerUid}/tasks/${this.task.id}`;
-      
       const formData = {
         ...this.form.value,
         finalizada: this.finalizada,
@@ -731,29 +842,17 @@ export class AddUpdateTaskComponent implements OnInit {
         updatedAt: new Date().toISOString(),
         tecnicoNombre: this.form.value.tecnicoNombre,
         materiales: this.form.value.materiales || [],
-        sucursal: this.form.value.sucursal // 👈 NUEVO CAMPO
+        sucursal: this.form.value.sucursal
       };
-      
       await this.firebaseSvc.updateTask(taskPath, formData);
-      
+      await this.consumirMaterialesStock();
       await this.utilsSvc.dismissLoading();
       await this.utilsSvc.dismissModal({ success: true });
-      
-      this.utilsSvc.presentToast({
-        message: '✅ Tarea actualizada correctamente',
-        color: 'success',
-        duration: 2000
-      });
-      
+      this.utilsSvc.presentToast({ message: '✅ Tarea actualizada correctamente', color: 'success', duration: 2000 });
     } catch (error) {
       console.error('Error en updateTask:', error);
       await this.utilsSvc.dismissLoading();
-      
-      this.utilsSvc.presentToast({
-        message: 'Error al actualizar la tarea',
-        color: 'danger',
-        duration: 3000
-      });
+      this.utilsSvc.presentToast({ message: 'Error al actualizar la tarea', color: 'danger', duration: 3000 });
     }
   }
 }

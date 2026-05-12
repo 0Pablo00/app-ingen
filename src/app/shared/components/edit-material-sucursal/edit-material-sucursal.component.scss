@@ -1,0 +1,126 @@
+/* Variables locales para mantener consistencia */
+:host {
+  --purple-gradient: linear-gradient(135deg, #6a1b9a 0%, #4a148c 100%);
+  --soft-purple-bg: #f5f0fa;
+}
+
+ion-content {
+  --background: var(--soft-purple-bg);
+}
+
+/* Header del Modal */
+.modal-header {
+  --background: var(--purple-gradient);
+  --color: white;
+}
+
+/* Tarjetas Estilizadas */
+ion-card {
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(74, 20, 140, 0.08);
+  border: 1px solid rgba(106, 27, 154, 0.05);
+  margin: 15px 0;
+  background: white;
+}
+
+ion-card-title {
+  color: #4a148c;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* Info Line - Datos del material */
+.info-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: var(--soft-purple-bg);
+  border-radius: 12px;
+
+  ion-icon {
+    font-size: 22px;
+    color: #7b1fa2;
+  }
+
+  span {
+    color: #4a148c;
+    font-size: 15px;
+  }
+
+  strong {
+    font-size: 18px;
+    color: #6a1b9a;
+  }
+}
+
+/* Inputs Mejorados */
+ion-item {
+  --background: #fff;
+  --border-radius: 12px;
+  --padding-start: 12px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(106, 27, 154, 0.1);
+  --inner-border-width: 0;
+}
+
+ion-label {
+  color: #6a1b9a !important;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* Botones con Personalidad */
+.btn-consume {
+  --border-radius: 12px;
+  --background: #d32f2f; /* Un rojo elegante para consumo */
+  font-weight: 700;
+  height: 50px;
+}
+
+.btn-move {
+  --border-radius: 12px;
+  --background: var(--purple-gradient);
+  font-weight: 600;
+  margin-top: 20px;
+}
+
+.btn-history-toggle {
+  --color: #7b1fa2;
+  --border-color: #7b1fa2;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+/* Historial */
+.mov-item {
+  --padding-start: 0;
+  border-bottom: 1px solid #eee;
+
+  h3 {
+    font-weight: 700;
+    color: #4a148c;
+  }
+
+  small {
+    color: #9e9e9e;
+  }
+
+  .usuario {
+    font-size: 11px;
+    background: #ede7f6;
+    color: #5e35b1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+}
+
+.btn-delete-material {
+  --border-radius: 12px;
+  --background: #d32f2f;
+  font-weight: 600;
+  margin-top: 10px;
+}

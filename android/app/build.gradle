@@ -5,17 +5,11 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "io.ionic.starter"
-        minSdkVersion rootProject.ext.minSdkVersion
+        minSdkVersion 24   // <-- CAMBIA ESTO (antes rootProject.ext.minSdkVersion)
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        
-        // Agregar para Firebase
-        manifestPlaceholders = [
-            firebaseAppName: "MFI Tareas"
-        ]
-        
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -28,7 +22,13 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+packagingOptions {
+        pickFirst 'org/bouncycastle/x509/CertPathReviewMessages_de.properties'
+        pickFirst 'org/bouncycastle/x509/CertPathReviewMessages.properties'
+    }
 }
+
+
 
 repositories {
     flatDir{
@@ -42,16 +42,6 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
-    
-    // ========= DEPENDENCIAS DE FIREBASE Y GOOGLE SERVICES =========
-    implementation 'com.google.android.gms:play-services-base:18.2.0'
-    implementation platform('com.google.firebase:firebase-bom:32.3.1')
-    implementation 'com.google.firebase:firebase-analytics'
-    implementation 'com.google.firebase:firebase-firestore'
-    implementation 'com.google.firebase:firebase-auth'
-    implementation 'com.google.firebase:firebase-messaging'
-    // ==============================================================
-    
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
@@ -60,5 +50,11 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-// APLICA EL PLUGIN DE GOOGLE SERVICES (simplificado)
-apply plugin: 'com.google.gms.google-services'
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

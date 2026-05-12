@@ -51,13 +51,44 @@ const routes: Routes = [
     canActivate: [AuthGuard]
   },
   // 👇 NUEVA RUTA PARA FINALIZADAS (si existe)
+
+   {
+    path: 'reportes',
+    loadChildren: () => import('./pages/tabs/reportes/reportes.module').then(m => m.ReportesPageModule),
+    canActivate: [AuthGuard, RoleGuard], // 👈 PROTEGIDA POR ROL
+    data: { role: 'admin' } // 👈 SOLO ADMINS
+  },
+
+   {
+    path: 'check',
+    loadChildren: () => import('./pages/tabs/check/check.module').then(m => m.CheckPageModule),
+    canActivate: [AuthGuard, RoleGuard], // 👈 PROTEGIDA POR ROL
+    data: { role: 'admin' } // 👈 SOLO ADMINS
+  },
+
   {
     path: 'finalizadas',
     loadChildren: () => import('./pages/tabs/finalizadas/finalizadas.module').then(m => m.FinalizadasPageModule),
     canActivate: [AuthGuard, RoleGuard], // 👈 PROTEGIDA POR ROL
     data: { role: 'admin' } // 👈 SOLO ADMINS
+  },
+
+  {
+    path: 'insumos',
+    loadChildren: () => import('./pages/tabs/insumos/insumos.module').then(m => m.InsumosPageModule),
+    canActivate: [AuthGuard, RoleGuard], // 👈 PROTEGIDA POR ROL
+    data: { role: 'admin' } // 👈 SOLO ADMINS
+  },
+
+  {
+    path: 'seguimineto',
+    loadChildren: () => import('./pages/tabs/seguimiento/seguimiento.module').then(m => m.SeguimientoPageModule),
+    canActivate: [AuthGuard, RoleGuard], // 👈 PROTEGIDA POR ROL
+    data: { role: 'admin' } // 👈 SOLO ADMINS
   }
 ];
+
+
 
 @NgModule({
   imports: [

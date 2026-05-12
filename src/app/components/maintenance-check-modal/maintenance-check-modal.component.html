@@ -1,0 +1,63 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Checklist - {{ sucursal }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cerrar()">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Datos generales -->
+  <ion-item>
+    <ion-label position="stacked">Fecha (dd/mm/aaaa)</ion-label>
+    <ion-input [(ngModel)]="fechaStr" placeholder="Ej: 24/04/2026" (ionChange)="onFechaChange()"></ion-input>
+  </ion-item>
+
+  <ion-item>
+    <ion-label position="stacked">Técnico</ion-label>
+    <ion-input [(ngModel)]="tecnicoNombre" placeholder="Nombre del técnico"></ion-input>
+  </ion-item>
+
+  <!-- Tabla de controles con ion-segment -->
+  <ion-grid class="controles-grid">
+    <ion-row class="header-row">
+      <ion-col size="6"><strong>CONTROL</strong></ion-col>
+      <ion-col size="6"><strong>ESTADO</strong></ion-col>
+    </ion-row>
+
+    <ion-row *ngFor="let control of controles" class="control-row">
+      <ion-col size="6">{{ control.nombre }}</ion-col>
+      <ion-col size="6">
+        <ion-segment [(ngModel)]="control.estado">
+          <ion-segment-button value="B">
+            <ion-label>B</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="R">
+            <ion-label>R</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="M">
+            <ion-label>M</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Observaciones -->
+  <ion-item>
+    <ion-label position="stacked">Observaciones generales</ion-label>
+    <ion-textarea [(ngModel)]="observaciones" rows="3" placeholder="Escriba observaciones adicionales..."></ion-textarea>
+  </ion-item>
+
+  <!-- Botones -->
+  <div class="button-container">
+    <ion-button expand="block" color="primary" (click)="guardar()">
+      <ion-icon name="save-outline" slot="start"></ion-icon>
+      Guardar Checklist
+    </ion-button>
+    <ion-button expand="block" fill="outline" (click)="cerrar()">Cancelar</ion-button>
+  </div>
+</ion-content>

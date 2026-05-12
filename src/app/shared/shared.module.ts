@@ -17,6 +17,9 @@ import { AddOrdenesComponent } from './components/add-ordenes/add-ordenes.compon
 import { AddHysComponent } from './components/add-hys/add-hys.component';
 import { ImageModalComponent } from 'src/app/components/image-modal/image-modal.component'; // Asegúrate de importar esto
 import { EditOrderNumberModalComponent } from './components/edit-order-number-modal/edit-order-number-modal.component';
+import { MaintenanceCheckModalComponent } from 'src/app/components/maintenance-check-modal/maintenance-check-modal.component';
+import { AddInsumoModalComponent } from 'src/app/shared/components/add-insumo-modal/add-insumo-modal.component';
+import { EditMaterialSucursalComponent } from 'src/app/shared/components/edit-material-sucursal/edit-material-sucursal.component';
 
 
 
@@ -34,7 +37,11 @@ import { EditOrderNumberModalComponent } from './components/edit-order-number-mo
     AddOrdenesComponent,
     AddHysComponent,  AddUpdateTaskComponent ,
     ImageModalComponent,
-    EditOrderNumberModalComponent
+    EditOrderNumberModalComponent,
+    MaintenanceCheckModalComponent,
+    AddInsumoModalComponent,
+    EditMaterialSucursalComponent
+    
   ],
   exports: [
     HeaderComponent,
@@ -51,7 +58,10 @@ import { EditOrderNumberModalComponent } from './components/edit-order-number-mo
     AddOrdenesComponent,
     AddHysComponent,  AddUpdateTaskComponent,
     ImageModalComponent,
-    EditOrderNumberModalComponent
+    EditOrderNumberModalComponent,
+    MaintenanceCheckModalComponent,
+    AddInsumoModalComponent,
+    EditMaterialSucursalComponent
   ],
   imports: [
     CommonModule,

@@ -1,0 +1,28 @@
+.content {
+  padding: 16px;
+}
+
+ion-item.checked {
+  --background: #d1fae5;  // verde claro
+  --border-color: #10b981;
+  --color: #065f46;
+  
+  h2, p {
+    color: #065f46;
+  }
+}
+
+.sucursales-container {
+  background: var(--ion-color-light, #f4f5f8);
+  width: 100%;
+  
+  ion-item {
+    --padding-start: 32px;
+    --inner-padding-end: 16px;
+  }
+}
+
+// Asegura que el contenido pueda hacer scroll completo
+ion-content {
+  --padding-bottom: 32px; // Espacio extra al final
+}

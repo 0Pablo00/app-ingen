@@ -1,0 +1,36 @@
+<app-header color="warning" title="Check List"></app-header>
+<ion-content color="warning" [fullscreen]="true">
+  <div class="content">
+    <ion-list>
+      <h2>Seleccione la provincia:</h2>
+      <ng-container *ngFor="let grupo of grupos">
+        <!-- Encabezado de provincia (accordion) -->
+        <ion-item button (click)="toggleGrupo(grupo)" detail>
+          <ion-label>
+            <h2>{{ grupo.provincia }}</h2>
+          </ion-label>
+          <ion-icon slot="end" [name]="grupo.expanded ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+        </ion-item>
+        
+        <!-- Sucursales (desplegable) -->
+        <div *ngIf="grupo.expanded" class="sucursales-container">
+          <ion-item 
+            *ngFor="let sucursal of grupo.sucursales" 
+            (click)="abrirSeleccionMes(sucursal)" 
+            button 
+            detail
+            [class.checked]="estadoMensual[sucursal]">
+            <ion-label>
+              <h2>{{ sucursal }}</h2>
+              <p *ngIf="historialChecks[sucursal]?.length">Último: {{ historialChecks[sucursal][0]?.fecha | date }}</p>
+            </ion-label>
+          </ion-item>
+        </div>
+      </ng-container>
+
+      <!-- 👇 Agrega este div al final para forzar scroll extra -->
+      <div style="height: 20px;"></div>
+
+    </ion-list>
+  </div>
+</ion-content>

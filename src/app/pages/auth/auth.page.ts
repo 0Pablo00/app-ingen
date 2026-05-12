@@ -6,6 +6,8 @@ import { UtilsService } from 'src/app/services/utils.service';
 import { Router } from '@angular/router';
 import { PasswordModalComponent } from 'src/app/shared/components/password-modal/password-modal.component';
 import { ModalController } from '@ionic/angular';
+import { LocationTrackingService } from 'src/app/services/location-tracking.service';
+import { Capacitor } from '@capacitor/core'
 
 @Component({
   selector: 'app-auth',
@@ -24,6 +26,7 @@ export class AuthPage implements OnInit {
     private firebaseSvc: FirebaseService,
     private utilsSvc: UtilsService,
     private modalCtrl: ModalController,
+    private trackingService: LocationTrackingService   // ← NUEVO
   ) { }
 
   ngOnInit() { }
@@ -33,7 +36,6 @@ export class AuthPage implements OnInit {
       
       console.log('1️⃣ Intentando login con:', this.form.value.email);
       
-      // 👈 GUARDAR REFERENCIA DEL LOADING CON AWAIT
       const loading = await this.utilsSvc.presentLoading({ message: 'Autenticando...' });
       
       try {
@@ -64,11 +66,18 @@ export class AuthPage implements OnInit {
         this.utilsSvc.setElementToLocalStorage('user', user);
         console.log('🔟 Usuario guardado en localStorage');
         
+        // 🔥 NUEVO: Iniciar seguimiento en segundo plano para TODOS los usuarios
+       if (Capacitor.isNativePlatform()) {
+  await this.trackingService.iniciarSeguimiento(user.uid);
+  console.log('🟢 Rastreo GPS iniciado para', user.uid);
+} else {
+  console.log('🌐 Entorno web: el rastreo en segundo plano no está disponible');
+}
+        
         // PASO 5: Verificar lo que se guardó
         const storedUser = this.utilsSvc.getElementFromLocalStorage('user');
         console.log('1️⃣1️⃣ Usuario en localStorage después de guardar:', storedUser);
         
-        // 👈 DISMISS CON AWAIT (CUANDO TODO SALE BIEN)
         await loading.dismiss();
         
         // PASO 6: Redirigir
@@ -86,7 +95,6 @@ export class AuthPage implements OnInit {
       } catch (error) {
         console.error('❌ Error en login:', error);
         
-        // 👈 DISMISS CON AWAIT (TAMBIÉN EN ERROR)
         await loading.dismiss();
         
         this.utilsSvc.presentToast({

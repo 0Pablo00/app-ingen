@@ -1,0 +1,171 @@
+// Colores base
+$bg-light: #f9fafb;
+$border-color: #e5e7eb;
+$text-dark: #111827;   // Negro más intenso
+$text-muted: #6b7280;
+
+// Colores segmentos
+$segment-bg: #ffffff;
+$segment-border: #d1d5db;
+$segment-b-active: #10b981;   // Verde para B (Bien)
+$segment-r-active: #f59e0b;   // Amarillo para R (Regular)
+$segment-m-active: #ef4444;   // Rojo para M (Mal)
+
+// Ajustes generales del contenido
+ion-content {
+  --background: #ffffff;
+  --padding-top: 20px;
+  --padding-bottom: 20px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+
+ion-toolbar {
+  --background: #ffffff;
+  --color: #111827;
+  --border-width: 0 0 1px 0;
+  --border-color: $border-color;
+}
+
+// Mejoras para los campos de fecha y técnico
+ion-item {
+  --border-radius: 8px;
+  margin-bottom: 16px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  
+  ion-label {
+    font-weight: 500;
+    color: $text-dark;
+    margin-bottom: 4px;
+  }
+  
+  ion-input, ion-textarea {
+    --padding-start: 12px;
+    --padding-end: 12px;
+    --border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid $border-color;
+    margin-top: 4px;
+  }
+}
+
+// Tabla de controles
+.controles-grid {
+  background: $bg-light;
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow-x: auto;
+  
+  .header-row {
+    background: #eef2ff;
+    font-weight: 600;
+    border-bottom: 2px solid $border-color;
+    padding: 12px 0;
+    color: $text-dark;
+  }
+  
+  .control-row {
+    border-bottom: 1px solid $border-color;
+    padding: 12px 0;
+    transition: background 0.2s;
+    
+    &:hover {
+      background: #f3f4f6;
+    }
+    
+    // Aseguramos que el texto de la primera columna sea negro
+    ion-col:first-child {
+      color: $text-dark;
+      font-weight: 500;
+      font-size: 14px;
+      
+      @media (max-width: 480px) {
+        font-size: 12px;
+      }
+    }
+  }
+}
+
+// Estilos para los segmentos (B, R, M) responsivos
+ion-segment {
+  --background: $segment-bg;
+  --border-radius: 8px;
+  --border-width: 1px;
+  --border-color: $segment-border;
+  --border-style: solid;
+  
+  ion-segment-button {
+    --indicator-color: transparent;
+    --border-radius: 6px;
+    --padding-start: 2px;
+    --padding-end: 2px;
+    min-width: 40px;   // Reducido un poco para móvil
+    font-size: 12px;
+    font-weight: 500;
+    
+    // Colores según valor seleccionado
+   &[value="B"] {
+    --color-checked: white;
+    --border-color-checked: #059669;
+    --background-checked: #10b981;   // Fondo verde sólido
+  }
+   &[value="R"] {
+    --color-checked: white;
+    --border-color-checked: #d97706;
+    --background-checked: #f59e0b;   // Fondo amarillo sólido
+  }
+    &[value="M"] {
+    --color-checked: white;
+    --border-color-checked: #dc2626;
+    --background-checked: #ef4444;   // Fondo rojo sólido
+  }
+    
+    &.segment-button-checked {
+      background: var(--background-checked);
+      border-color: var(--border-color-checked);
+      color: var(--color-checked);
+    }
+    
+    ion-label {
+      font-weight: 500;
+      font-size: 12px;
+      
+      @media (max-width: 480px) {
+        font-size: 11px;
+      }
+    }
+  }
+}
+
+// Ajuste para móvil
+@media (max-width: 480px) {
+  ion-col[size="6"]:first-child {
+    font-size: 11px;
+    padding-right: 8px;
+    word-break: break-word;
+  }
+  ion-col[size="6"]:last-child {
+    padding-left: 4px;
+  }
+  
+  .control-row {
+    padding: 8px 0;
+  }
+  
+  ion-segment-button {
+    min-width: 36px !important;
+  }
+}
+
+.button-container {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+ion-item ion-label {
+  white-space: normal;
+  font-size: 14px;
+}

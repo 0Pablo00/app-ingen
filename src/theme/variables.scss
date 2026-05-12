@@ -237,3 +237,33 @@
       --ion-card-background: #1e1e1e;
     }
   
+
+    // Para pantallas grandes (PC), el modal ocupará un ancho máximo de 800px y se centrará
+@media (min-width: 768px) {
+  .wide-modal {
+    --width: 90%;
+    --max-width: 800px;
+    --height: 90%;
+    --border-radius: 16px;
+  }
+}
+
+
+
+:root {
+  --ion-color-custom: #6f42c1;
+  --ion-color-custom-rgb: 111, 66, 193;
+  --ion-color-custom-contrast: #ffffff;
+  --ion-color-custom-contrast-rgb: 255, 255, 255;
+  --ion-color-custom-shade: #623aac;
+  --ion-color-custom-tint: #7f55c9;
+}
+
+.ion-color-custom {
+  --ion-color-base: var(--ion-color-custom);
+  --ion-color-base-rgb: var(--ion-color-custom-rgb);
+  --ion-color-contrast: var(--ion-color-custom-contrast);
+  --ion-color-contrast-rgb: var(--ion-color-custom-contrast-rgb);
+  --ion-color-shade: var(--ion-color-custom-shade);
+  --ion-color-tint: var(--ion-color-custom-tint);
+}

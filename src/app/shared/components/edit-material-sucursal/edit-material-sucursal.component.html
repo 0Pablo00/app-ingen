@@ -1,0 +1,122 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="modal-header">
+    <ion-title>Gestión: {{ material.nombre }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon slot="icon-only" name="close-circle" color="light"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  
+  <!-- ESTADO ACTUAL -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-subtitle style="color: #7b1fa2; font-weight: 600;">{{ sucursal }}</ion-card-subtitle>
+      <ion-card-title>Stock</ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <div class="info-line">
+        <ion-icon name="cube"></ion-icon>
+        <span>Stock: <strong>{{ material.cantidad }} {{ material.unidad }}</strong></span>
+      </div>
+      <div class="info-line">
+        <ion-icon name="calendar-clear"></ion-icon>
+        <span>Último uso: {{ material.ultimaAsignacion | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- REGISTRAR CONSUMO -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Registrar Salida</ion-card-title>
+    </ion-card-header>
+    
+    <ion-card-content>
+      <ion-item lines="none">
+        <ion-label position="stacked">Cantidad a descontar *</ion-label>
+        <ion-input type="number" [(ngModel)]="cantidadConsumo" placeholder="0.00" min="0.1" step="0.1"></ion-input>
+      </ion-item>
+      
+      <ion-item lines="none">
+        <ion-label position="stacked">Orden de Trabajo</ion-label>
+        <ion-input type="text" [(ngModel)]="ordenTrabajo" placeholder="Ej: OT-1234"></ion-input>
+      </ion-item>
+
+      <ion-button expand="block" class="btn-consume" (click)="consumirMaterial()">
+        <ion-icon name="remove-circle-outline" slot="start"></ion-icon>
+        Confirmar Consumo
+      </ion-button>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- ACCIONES SECUNDARIAS -->
+  <div class="ion-padding-horizontal">
+    <!-- Botón Transferir -->
+    <ion-button expand="block" class="btn-transfer" (click)="transferirMaterial()">
+      <ion-icon name="git-compare-outline" slot="start"></ion-icon>
+      Transferir a otra sucursal
+    </ion-button>
+
+    <ion-button expand="block" class="btn-delete-material" (click)="eliminarMaterialDeSucursal()">
+      <ion-icon name="trash-outline" slot="start"></ion-icon>
+      Eliminar material de esta sucursal
+    </ion-button>
+
+    <ion-button expand="block" fill="outline" class="btn-history-toggle" (click)="toggleHistorial()">
+      <ion-icon [name]="mostrarHistorial ? 'eye-off-outline' : 'time-outline'" slot="start"></ion-icon>
+      {{ mostrarHistorial ? 'Ocultar' : 'Ver' }} Historial de Movimientos
+    </ion-button>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div *ngIf="mostrarHistorial" class="ion-margin-top">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Log de Movimientos</ion-card-title>
+      </ion-card-header>
+      
+      <ion-card-content>
+        <div *ngIf="cargandoHistorial" class="ion-text-center ion-padding">
+          <ion-spinner name="dots" color="primary"></ion-spinner>
+          <p style="color: #7b1fa2;">Consultando base de datos...</p>
+        </div>
+
+        <ion-list lines="none" *ngIf="!cargandoHistorial">
+          <ion-item *ngFor="let mov of movimientos" class="mov-item" lines="full">
+            <ion-icon 
+              slot="start" 
+              [name]="mov.tipo === 'consumo' ? 'arrow-down-circle' : (mov.tipo === 'traslado' ? 'swap-horizontal' : 'arrow-up-circle')" 
+              [color]="mov.tipo === 'consumo' ? 'danger' : (mov.tipo === 'traslado' ? 'tertiary' : 'success')">
+            </ion-icon>
+            
+            <ion-label>
+              <h3>{{ mov.tipo | titlecase }}</h3>
+              <p><strong>{{ mov.cantidad }} {{ mov.unidad }}</strong></p>
+              <p *ngIf="mov.ordenTrabajo">OT: {{ mov.ordenTrabajo }}</p>
+              <p *ngIf="mov.sucursalDestino">Destino: {{ mov.sucursalDestino }}</p>
+              <p *ngIf="mov.sucursalOrigen">Origen: {{ mov.sucursalOrigen }}</p>
+              <small>{{ mov.fecha | date:'dd/MM/yyyy HH:mm' }}</small>
+              <br>
+              <span class="usuario">👤 {{ mov.usuario || 'Sistema' }}</span>
+            </ion-label>
+            
+            <!-- Botón eliminar movimiento -->
+            <ion-button slot="end" fill="clear" color="danger" (click)="eliminarMovimiento(mov)">
+              <ion-icon name="trash-outline"></ion-icon>
+            </ion-button>
+          </ion-item>
+
+          <div *ngIf="movimientos.length === 0" class="ion-text-center ion-padding">
+            <p>Sin registros previos.</p>
+          </div>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+</ion-content>

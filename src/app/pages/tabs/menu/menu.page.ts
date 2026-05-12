@@ -36,9 +36,30 @@ export class MenuPage implements OnInit {
     this.router.navigate(['/tabs/guardias']);
   }
 
+   goToreportes() {
+    this.router.navigate(['/tabs/reportes']);
+  }
+
+
   goToObras() {
     this.router.navigate(['/tabs/home']);
   }
+
+goToCheck(){
+ this.router.navigate(['/tabs/check']);
+
+}
+
+
+goToInsumos(){
+ this.router.navigate(['/tabs/insumos']);
+
+}
+
+goToSeguimiento() {
+  this.router.navigate(['/tabs/seguimiento']);
+}
+
 
   // 👇 MODIFICADO: Aires con verificación de rol
   async checkPasswordAndGoToAires() {

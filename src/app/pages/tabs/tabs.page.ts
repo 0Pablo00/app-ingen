@@ -46,39 +46,6 @@ export class TabsPage {
       duration: 3000
     });
     
-    // OPCIÓN: Si quieres mantener el sistema de contraseñas TEMPORALMENTE
-    // descomenta el código de abajo y comenta el toast de arriba
-    
-    /*
-    // Evitar abrir múltiples modales
-    if (this.isModalOpen) return;
-    
-    this.isModalOpen = true;
-    
-    const modal = await this.modalCtrl.create({
-      component: PasswordModalComponent
-    });
-  
-    await modal.present();
-  
-    const { data } = await modal.onWillDismiss();
-    this.isModalOpen = false;
-  
-    if (data) {
-      const { password } = data;
-      const validPasswords = ['1234', 'servicios2024', 'operario_2024'];
-  
-      if (validPasswords.includes(password)) {
-        this.router.navigate(['/tabs/finalizadas']);
-      } else {
-        this.utilsSvc.presentToast({
-          message: 'Contraseña incorrecta',
-          color: 'warning',
-          icon: 'alert-circle-outline',
-          duration: 3000
-        });
-      }
-    }
-    */
+   
   }
 }

@@ -37,8 +37,9 @@ export interface Item {
 
 // 👇 NUEVA INTERFAZ PARA MATERIALES
 export interface Material {
+  insumoId?: string;    // 👈 NUEVO
   nombre: string;
-  cantidad?: number;      // Opcional: cantidad utilizada
-  unidad?: string;        // Opcional: unidad (metros, kg, unidades, etc.)
-  observacion?: string;   // Opcional: observaciones del material
+  cantidad?: number;
+  unidad?: string;
+  observacion?: string;
 }

@@ -1,6 +1,9 @@
 import { Component } from '@angular/core';
 import { UtilsService } from './services/utils.service';
 import { Capacitor } from '@capacitor/core';
+import { SplashScreen } from '@capacitor/splash-screen';
+import { NotificationService } from './services/notification.service';
+import { LocationTrackingService } from './services/location-tracking.service';
 
 @Component({
   selector: 'app-root',
@@ -8,11 +11,24 @@ import { Capacitor } from '@capacitor/core';
   styleUrls: ['app.component.scss'],
 })
 export class AppComponent {
-  constructor(private utilsSvc: UtilsService) {
+  constructor(
+    private utilsSvc: UtilsService,
+    private notificationSvc: NotificationService,  // ← AGREGADO
+  ) {
     this.initializeApp();
+    this.showSplash();
+  }
+
+  async showSplash(){
+    await SplashScreen.show({
+      autoHide: true,
+      showDuration: 3000
+    });
   }
 
   async initializeApp() {
+
+    
     // Manejo global de errores no capturados
     window.addEventListener('unhandledrejection', (event) => {
       console.error('❌ Error no manejado:', event.reason);
@@ -52,7 +68,54 @@ export class AppComponent {
     setTimeout(() => {
       this.checkForUpdates();
     }, 3000);
+
+    // 🔥 NUEVO: Inicializar notificaciones PWA
+    setTimeout(() => {
+      this.initNotifications();
+    }, 5000);
+
+    
   }
+
+  // 🔥 NUEVO: Método para inicializar notificaciones
+async initNotifications() {
+  try {
+    // Obtener el uid desde localStorage (donde se guarda el usuario)
+    let userId = null;
+    
+    // Intentar obtener del objeto user
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        userId = user.uid;
+      } catch(e) {
+        console.log('Error parseando user:', e);
+      }
+    }
+    
+    // Si no, intentar con uid directo
+    if (!userId) {
+      userId = localStorage.getItem('uid');
+    }
+    
+    if (userId) {
+      console.log('🔄 Inicializando notificaciones para usuario:', userId);
+      const token = await this.notificationSvc.requestPermissionAndGetToken(userId);
+      if (token) {
+        console.log('✅ Token FCM obtenido correctamente');
+        this.notificationSvc.listenToMessages();
+      } else {
+        console.log('⚠️ No se pudo obtener token de notificaciones');
+      }
+    } else {
+      console.log('⚠️ Usuario no autenticado, notificaciones no inicializadas');
+    }
+  } catch (error) {
+    console.error('❌ Error al inicializar notificaciones:', error);
+  }
+}
+
 
   async checkForUpdates() {
     try {

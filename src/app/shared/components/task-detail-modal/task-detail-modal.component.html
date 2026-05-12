@@ -1,0 +1,139 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Detalle de Orden #{{ task.orderNumber }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="detail-container">
+    <!-- Número de orden y fecha -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Información general</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list lines="full">
+          <ion-item>
+            <ion-label>
+              <h3>🔢 N° Orden</h3>
+              <p>{{ task.orderNumber }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>📅 Fecha de creación</h3>
+              <p>{{ task.createdAt | date:'dd/MM/yyyy HH:mm' }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>🏢 Sucursal</h3>
+              <p>{{ task.sucursal || 'No especificada' }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>👤 Técnico</h3>
+              <p>{{ task.tecnicoNombre || 'No asignado' }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-label>
+              <h3>✅ Estado</h3>
+              <ion-badge [color]="task.finalizada ? 'success' : 'warning'">
+                {{ task.finalizada ? 'Finalizada' : 'Pendiente' }}
+              </ion-badge>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Título y descripción -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>📌 Trabajo realizado</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-item>
+          <ion-label>
+            <h3>Título:</h3>
+            <p>{{ task.title }}</p>
+          </ion-label>
+        </ion-item>
+        <ion-item>
+          <ion-label>
+            <h3>Descripción:</h3>
+            <p>{{ task.description }}</p>
+          </ion-label>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Pasos / Items -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>✅ Pasos del trabajo</ion-card-title>
+        <ion-progress-bar [value]="getPercentage() / 100" color="success"></ion-progress-bar>
+        <p class="progress-text">{{ getPercentage() }}% completado</p>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list *ngIf="task.items && task.items.length > 0; else noItems">
+          <ion-item *ngFor="let item of task.items">
+            <ion-label>
+              <p [class.completed]="item.completed">{{ item.name }}</p>
+            </ion-label>
+            <ion-icon slot="end" [name]="item.completed ? 'checkmark-circle' : 'ellipse-outline'"
+              [color]="item.completed ? 'success' : 'medium'"></ion-icon>
+          </ion-item>
+        </ion-list>
+        <ng-template #noItems>
+          <p class="text-center">No se registraron pasos.</p>
+        </ng-template>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Materiales -->
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>📦 Materiales utilizados</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list *ngIf="task.materiales && task.materiales.length > 0; else noMaterials">
+          <ion-item *ngFor="let mat of task.materiales">
+            <ion-label>
+              <h3>{{ mat.nombre }}</h3>
+              <p *ngIf="mat.cantidad">Cantidad: {{ mat.cantidad }} {{ mat.unidad || '' }}</p>
+              <p *ngIf="mat.observacion">Observación: {{ mat.observacion }}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+        <ng-template #noMaterials>
+          <p class="text-center">No se registraron materiales.</p>
+        </ng-template>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Imagen -->
+    <ion-card *ngIf="hasImage()">
+      <ion-card-header>
+        <ion-card-title> Imagen adjunta</ion-card-title>
+      </ion-card-header>
+      <ion-card-content class="image-container">
+        <img [src]="task.orderImage" (click)="openImageModal()" style="cursor: pointer; max-width: 100%; border-radius: 8px;" />
+        <p class="image-note">Tocá la imagen para ampliarla</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-button expand="full" (click)="dismiss()">Cerrar</ion-button>
+  </ion-toolbar>
+</ion-footer>

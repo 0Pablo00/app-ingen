@@ -40,13 +40,43 @@ const routes: Routes = [
         path: 'hys',
         loadChildren: () => import('./hys/hys.module').then(m => m.HysPageModule)
       },
+
+      {
+        path: 'reportes',
+        loadChildren: () => import('./reportes/reportes.module').then(m => m.ReportesPageModule)
+      },
+
+      {
+        path: 'check',
+        loadChildren: () => import('./check/check.module').then(m => m.CheckPageModule)
+      },
+      
+
       {
         path: '',
         redirectTo: '/tabs/menu', // O '/tabs/home' según prefieras
         pathMatch: 'full'
-      }
+      },
+
+      {
+    path: 'seguimiento',
+    loadChildren: () => import('./seguimiento/seguimiento.module').then( m => m.SeguimientoPageModule)
+  },
+
+      {
+    path: 'insumos',
+    loadChildren: () => import('./insumos/insumos.module').then( m => m.InsumosPageModule)
+  },
     ]
-  }
+  },
+  
+
+  
+
+ 
+
+  
+
 ];
 
 @NgModule({

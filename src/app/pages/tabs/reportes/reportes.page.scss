@@ -1,0 +1,193 @@
+ion-content {
+  --background: #f8f9fa;
+}
+
+.selector-card, .stats-card, .total-card, .operarios-card {
+  margin-bottom: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.selector-card {
+  background: white;
+}
+
+.ranking-list {
+  background: transparent;
+  
+  .ranking-item {
+    --padding-start: 8px;
+    --inner-padding-end: 8px;
+    margin-bottom: 4px;
+    border-radius: 12px;
+    cursor: pointer;
+    
+    h2 {
+      font-size: 1rem;
+      font-weight: 500;
+      margin: 8px 0;
+    }
+  }
+}
+
+/* Estilos para el detalle expandido */
+.sucursal-detalle {
+  background: #f1f3f5;
+  border-radius: 12px;
+  margin: 4px 8px 12px 8px;
+  padding: 8px 0;
+  
+  .detalle-list {
+    background: transparent;
+  }
+  
+  .detalle-item {
+    --padding-start: 16px;
+    --inner-padding-end: 16px;
+    --background: transparent;
+    font-size: 0.85rem;
+    
+    p {
+      margin: 4px 0;
+      color: #333;
+    }
+    
+    strong {
+      color: #2c3e66;
+    }
+  }
+}
+
+ion-badge {
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+.total-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  
+  ion-card-header, ion-card-content {
+    color: white;
+  }
+  
+  .total-number {
+    font-size: 3rem;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.2;
+  }
+  
+  .total-label {
+    text-align: center;
+    font-size: 1rem;
+    opacity: 0.9;
+  }
+}
+
+.operarios-toggle {
+  margin: 16px 0;
+  --border-radius: 30px;
+  --border-width: 2px;
+}
+
+.operarios-card {
+  background: white;
+  animation: fadeIn 0.3s ease;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  
+  .empty-icon {
+    font-size: 64px;
+    color: #ccc;
+    margin-bottom: 16px;
+  }
+  
+  h3 {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #666;
+  }
+  
+  p {
+    color: #999;
+    margin-top: 8px;
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  
+  ion-spinner {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+  }
+  
+  p {
+    color: #666;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Ajustes para modo oscuro
+@media (prefers-color-scheme: dark) {
+  ion-content {
+    --background: #121212;
+  }
+  
+  .selector-card, .stats-card, .operarios-card {
+    background: #1e1e1e;
+  }
+  
+  .total-card {
+    background: linear-gradient(135deg, #4a5b9e 0%, #5c3d7a 100%);
+  }
+  
+  .empty-state {
+    .empty-icon {
+      color: #444;
+    }
+    h3 { color: #aaa; }
+    p { color: #777; }
+  }
+  
+  .sucursal-detalle {
+    background: #2a2a2a;
+    
+    .detalle-item p {
+      color: #ddd;
+    }
+    .detalle-item strong {
+      color: #9bb8e0;
+    }
+  }
+}
+
+.error-message {
+  color: var(--ion-color-danger);
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+.retry-button {
+  margin-top: 16px;
+}

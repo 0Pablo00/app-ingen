@@ -5,6 +5,9 @@ import { User } from '../models/user.model';
 import { getAuth, updateProfile } from 'firebase/auth';
 import { UtilsService } from './utils.service';
 import { take } from 'rxjs/operators';
+import { Insumo, MaterialSucursal, MovimientoMaterial } from 'src/app/models/insumo.model';
+
+import { MaintenanceCheck } from '../models/maintenance-check.model';
 import { 
   collection, 
   query, 
@@ -21,6 +24,8 @@ import {
   limit,
   QueryConstraint,
   startAfter,
+  getDocsFromServer,   // 👈 NUEVO
+  getDocsFromCache,  
 } from 'firebase/firestore';
 
 @Injectable({
@@ -29,12 +34,17 @@ import {
 export class FirebaseService {
 
   private isOnline: boolean = navigator.onLine;
+  private firestoreModular: any; // Instancia de Firestore con tipos flexibles
 
+private readonly MAINTENANCE_OWNER_UID = '0xa3Lyek75Tc9iYNQPy54hzfgMv2';
   constructor(
     private auth: AngularFireAuth,
     private db: AngularFirestore,
     private utilsSvc: UtilsService
   ) {
+    // Inicializar la instancia modular de Firestore
+    this.firestoreModular = this.db.firestore;
+    
     // Monitorear conexión
     window.addEventListener('online', () => {
       this.isOnline = true;
@@ -91,7 +101,7 @@ export class FirebaseService {
         return null;
       }
       
-      const docRef = doc(this.db.firestore, collectionPath, docId);
+      const docRef = doc(this.firestoreModular, collectionPath, docId);
       const docSnapshot = await getDoc(docRef);
       
       if (!docSnapshot.exists()) {
@@ -105,7 +115,7 @@ export class FirebaseService {
       
       // Si hay error, intentar con caché
       try {
-        const docRef = doc(this.db.firestore, collectionPath, docId);
+        const docRef = doc(this.firestoreModular, collectionPath, docId);
         const docSnapshot = await getDoc(docRef);
         if (docSnapshot.exists()) {
           return { id: docSnapshot.id, ...docSnapshot.data() };
@@ -144,7 +154,7 @@ export class FirebaseService {
         throw new Error('No hay conexión a internet');
       }
       
-      const docRef = doc(this.db.firestore, collectionPath, docId);
+      const docRef = doc(this.firestoreModular, collectionPath, docId);
       await setDoc(docRef, data);
       
       console.log(`✅ Documento guardado: ${collectionPath}/${docId}`);
@@ -165,146 +175,150 @@ export class FirebaseService {
   /**
    * OBTENER TAREAS CON FILTROS OPTIMIZADOS
    */
-  async getFilteredTasks(
-    userId: string, 
-    filters: {
-      finalizada?: boolean;
-      orderByNumber?: boolean;
-      limitTo?: number;
-    } = {}
-  ): Promise<any[]> {
-    try {
-      const user = await this.auth.authState.pipe(take(1)).toPromise();
-      if (!user) {
-        console.error('No hay usuario autenticado');
-        return [];
-      }
-      
-      const tasksRef = collection(this.db.firestore, `users/${userId}/tasks`);
-      
-      let allTasks: any[] = [];
-      
-      if (filters.finalizada === false) {
-        // Para "NO finalizadas": tareas con false + undefined
-        
-        // Primera consulta: finalizada = false
-        const q1 = query(
-          tasksRef, 
-          where('finalizada', '==', false),
-          ...(filters.orderByNumber ? [orderBy('orderNumber', 'desc')] : [])
-        );
-        
-        // Segunda consulta: tareas SIN el campo finalizada
-        const q2 = query(tasksRef);
-        
-        let snapshot1, snapshot2;
-        
-        if (this.isOnline) {
-          try {
-            snapshot1 = await getDocs(q1);
-            snapshot2 = await getDocs(q2);
-          } catch (error) {
-            console.warn('⚠️ Error de servidor, usando caché');
-            snapshot1 = await getDocs(q1);
-            snapshot2 = await getDocs(q2);
-          }
-        } else {
-          snapshot1 = await getDocs(q1);
-          snapshot2 = await getDocs(q2);
-        }
-        
-        // Combinar resultados
-        const tasks1 = snapshot1.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const tasks2 = snapshot2.docs
-          .filter(doc => {
-            const data = doc.data();
-            return data.finalizada === undefined;
-          })
-          .map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Combinar y eliminar duplicados
-        allTasks = [...tasks1, ...tasks2];
-        
-        // Eliminar duplicados
-        const uniqueIds = new Set();
-        allTasks = allTasks.filter(task => {
-          if (uniqueIds.has(task.id)) {
-            return false;
-          }
-          uniqueIds.add(task.id);
-          return true;
-        });
-        
-        // Ordenar después de combinar
-        if (filters.orderByNumber) {
-          allTasks.sort((a, b) => (b.orderNumber || 0) - (a.orderNumber || 0));
-        }
-        
-      } else if (filters.finalizada === true) {
-        // Para finalizadas, consulta directa
-        const q = query(
-          tasksRef, 
-          where('finalizada', '==', true),
-          ...(filters.orderByNumber ? [orderBy('orderNumber', 'desc')] : [])
-        );
-        
-        let snapshot;
-        if (this.isOnline) {
-          try {
-            snapshot = await getDocs(q);
-          } catch (error) {
-            console.warn('⚠️ Error de servidor, usando caché');
-            snapshot = await getDocs(q);
-          }
-        } else {
-          snapshot = await getDocs(q);
-        }
-        
-        allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-      } else {
-        // Sin filtro de finalizada (todos)
-        const q = query(
-          tasksRef,
-          ...(filters.orderByNumber ? [orderBy('orderNumber', 'desc')] : [])
-        );
-        
-        let snapshot;
-        if (this.isOnline) {
-          try {
-            snapshot = await getDocs(q);
-          } catch (error) {
-            console.warn('⚠️ Error de servidor, usando caché');
-            snapshot = await getDocs(q);
-          }
-        } else {
-          snapshot = await getDocs(q);
-        }
-        
-        allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      }
-      
-      // Aplicar límite si es necesario
-      if (filters.limitTo && allTasks.length > filters.limitTo) {
-        allTasks = allTasks.slice(0, filters.limitTo);
-      }
-      
-      console.log(`✅ ${allTasks.length} tareas encontradas`);
-      
-      return allTasks;
-      
-    } catch (error) {
-      console.error('Error crítico en getFilteredTasks:', error);
-      
-      this.utilsSvc.presentToast({
-        message: 'Error al cargar tareas',
-        color: 'danger',
-        duration: 3000
+ 
+  /**
+ /**
+ * OBTENER TAREAS CON FILTROS OPTIMIZADOS (FORZANDO SERVIDOR O CACHÉ)
+ */
+async getFilteredTasks(
+  userId: string,
+  filters: {
+    finalizada?: boolean;
+    orderByNumber?: boolean;
+    limitTo?: number;
+  } = {}
+): Promise<any[]> {
+  console.log(`🔍 getFilteredTasks iniciado para userId=${userId}, filters=`, filters);
+  console.time('getFilteredTasks_total');
+
+  try {
+    const user = await this.auth.authState.pipe(take(1)).toPromise();
+    if (!user) {
+      console.error('No hay usuario autenticado');
+      return [];
+    }
+
+    const tasksRef = collection(this.firestoreModular, `users/${userId}/tasks`);
+    let allTasks: any[] = [];
+
+    if (filters.finalizada === true) {
+      console.log('📡 Consultando tareas finalizadas (finalizada==true)');
+      console.time('consulta_finalizadas');
+      const q = query(
+        tasksRef,
+        where('finalizada', '==', true),
+        ...(filters.orderByNumber ? [orderBy('orderNumber', 'desc')] : [])
+      );
+      const snapshot = await getDocsFromServer(q);
+      console.timeEnd('consulta_finalizadas');
+      allTasks = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      console.log(`✅ ${allTasks.length} tareas finalizadas obtenidas del servidor`);
+
+    } else if (filters.finalizada === false) {
+      console.log('📡 Consultando tareas NO finalizadas (finalizada==false o undefined)');
+      console.time('consulta_no_finalizadas');
+
+      const qFalse = query(tasksRef, where('finalizada', '==', false));
+      const snapshotFalse = await getDocsFromServer(qFalse);
+      const tasksFalse = snapshotFalse.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+
+      const qUndef = query(tasksRef);
+      const snapshotUndef = await getDocsFromServer(qUndef);
+      const tasksUndef = snapshotUndef.docs
+        .filter((doc: any) => doc.data().finalizada === undefined)
+        .map((doc: any) => ({ id: doc.id, ...doc.data() }));
+
+      allTasks = [...tasksFalse, ...tasksUndef];
+      const uniqueIds = new Set();
+      allTasks = allTasks.filter(task => {
+        if (uniqueIds.has(task.id)) return false;
+        uniqueIds.add(task.id);
+        return true;
       });
-      
+      if (filters.orderByNumber) {
+        allTasks.sort((a, b) => (b.orderNumber || 0) - (a.orderNumber || 0));
+      }
+      console.timeEnd('consulta_no_finalizadas');
+      console.log(`✅ ${allTasks.length} tareas NO finalizadas obtenidas`);
+
+    } else {
+      console.log('📡 Consultando TODAS las tareas (sin filtro finalizada)');
+      console.time('consulta_todas');
+      const q = query(tasksRef);
+      const snapshot = await getDocsFromServer(q);
+      console.timeEnd('consulta_todas');
+      allTasks = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      console.log(`✅ ${allTasks.length} tareas totales obtenidas del servidor`);
+    }
+
+    if (filters.limitTo && allTasks.length > filters.limitTo) {
+      allTasks = allTasks.slice(0, filters.limitTo);
+      console.log(`✂️ Limitado a ${filters.limitTo} tareas`);
+    }
+
+    console.timeEnd('getFilteredTasks_total');
+    return allTasks;
+
+  } catch (error) {
+    console.error('❌ Error en getFilteredTasks (servidor):', error);
+    console.timeEnd('getFilteredTasks_total');
+
+    // Fallback a caché
+    try {
+      console.log('💾 Intentando lectura desde caché local...');
+      console.time('consulta_cache');
+      const tasksRef = collection(this.firestoreModular, `users/${userId}/tasks`);
+      const q = query(tasksRef);
+      const snapshot = await getDocsFromCache(q);
+      const allTasks = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      console.timeEnd('consulta_cache');
+      console.log(`💾 ${allTasks.length} tareas desde caché local`);
+      return allTasks;
+    } catch (cacheError) {
+      console.error('❌ Error también en caché:', cacheError);
+      this.utilsSvc.presentToast({
+        message: 'Error al cargar tareas. Verifica tu conexión.',
+        color: 'danger',
+        duration: 4000
+      });
       return [];
     }
   }
+}
+
+
+
+/**
+ * Obtiene tareas finalizadas de un mes específico usando rangos de fecha
+ * REQUIERE un índice compuesto en Firestore: finalizada ASC, createdAt ASC
+ */
+async getFinalizedTasksByMonth(userId: string, year: number, month: number): Promise<any[]> {
+  console.log(`📅 [Firebase] getFinalizedTasksByMonth: ${year}-${month}`);
+  console.time('[Firebase] consulta_por_mes');
+  
+  // Calcular fechas de inicio y fin en formato ISO string (compatible con createdAt)
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 1);
+  
+  const startIso = startDate.toISOString();
+  const endIso = endDate.toISOString();
+  
+  const tasksRef = collection(this.firestoreModular, `users/${userId}/tasks`);
+  const q = query(
+    tasksRef,
+    where('finalizada', '==', true),
+    where('createdAt', '>=', startIso),
+    where('createdAt', '<', endIso),
+    orderBy('createdAt', 'desc')
+  );
+  
+  const snapshot = await getDocsFromServer(q);
+  const tasks = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+  console.timeEnd('[Firebase] consulta_por_mes');
+  console.log(`[Firebase] Encontradas ${tasks.length} tareas para ${year}-${month}`);
+  return tasks;
+}
+
 
   /**
    * OBTENER NÚMERO DE ORDEN ATÓMICO (VERSIÓN OPTIMIZADA)
@@ -329,9 +343,9 @@ export class FirebaseService {
         throw new Error('No hay conexión a internet');
       }
       
-      const counterRef = doc(this.db.firestore, `users/${userId}/config/counter`);
+      const counterRef = doc(this.firestoreModular, `users/${userId}/config/counter`);
       
-      const newOrderNumber = await runTransaction(this.db.firestore, async (transaction) => {
+      const newOrderNumber = await runTransaction(this.firestoreModular, async (transaction: any) => {
         console.log('🔄 Iniciando transacción...');
         const counterDoc = await transaction.get(counterRef);
         
@@ -339,7 +353,7 @@ export class FirebaseService {
           // SOLO UNA VEZ: Buscar el máximo número existente de manera eficiente
           console.log('🔄 Contador no existe, inicializando por primera vez...');
           
-          const tasksRef = collection(this.db.firestore, `users/${userId}/tasks`);
+          const tasksRef = collection(this.firestoreModular, `users/${userId}/tasks`);
           const maxOrderQuery = query(tasksRef, orderBy('orderNumber', 'desc'), limit(1));
           const maxOrderSnapshot = await getDocs(maxOrderQuery);
           
@@ -410,7 +424,7 @@ export class FirebaseService {
         throw new Error('No hay conexión a internet');
       }
       
-      const tasksRef = collection(this.db.firestore, `users/${userId}/tasks`);
+      const tasksRef = collection(this.firestoreModular, `users/${userId}/tasks`);
       
       // Limpiar datos undefined y null
       const cleanData = JSON.parse(JSON.stringify(taskData));
@@ -457,7 +471,7 @@ export class FirebaseService {
         throw new Error('No hay conexión a internet');
       }
       
-      const taskRef = doc(this.db.firestore, taskPath);
+      const taskRef = doc(this.firestoreModular, taskPath);
       
       // Limpiar datos undefined y null
       const cleanData = JSON.parse(JSON.stringify(taskData));
@@ -503,7 +517,7 @@ export class FirebaseService {
         throw new Error('No hay conexión a internet');
       }
       
-      const taskRef = doc(this.db.firestore, taskPath);
+      const taskRef = doc(this.firestoreModular, taskPath);
       await deleteDoc(taskRef);
       
       console.log(`✅ Tarea eliminada: ${taskPath}`);
@@ -521,13 +535,6 @@ export class FirebaseService {
     }
   }
 
-  /**
-   * OBTENER TAREAS CON FILTROS Y PAGINACIÓN
-   */
-  /**
- * OBTENER TAREAS CON FILTROS Y PAGINACIÓN - VERSIÓN CORREGIDA
- * Carga de 10 en 10 usando startAfter
- */
 async getFilteredTasksPaginated(
   userId: string, 
   filters: {
@@ -535,6 +542,7 @@ async getFilteredTasksPaginated(
     orderByNumber?: boolean;
     limitTo?: number;
     startAfter?: any;
+    createdBy?: string;  // ← NUEVO
   } = {}
 ): Promise<{ tasks: any[], lastVisible: any }> {
   try {
@@ -544,155 +552,96 @@ async getFilteredTasksPaginated(
       return { tasks: [], lastVisible: null };
     }
     
-    const tasksRef = collection(this.db.firestore, `users/${userId}/tasks`);
+    const tasksRef = collection(this.firestoreModular, `users/${userId}/tasks`);
     const limitSize = filters.limitTo || 10;
     
     let allTasks: any[] = [];
     let lastVisible = null;
     
+    // Construir array de condiciones (constraints)
+    let constraints: QueryConstraint[] = [];
+    
+    // Filtro por estado (finalizada)
+    if (filters.finalizada !== undefined) {
+      if (filters.finalizada === false) {
+        // Para "NO finalizadas": tareas con false + undefined (lo mismo que antes)
+        // Pero como es complejo, mantendremos la lógica original separada.
+        // En lugar de reescribir todo, dejamos la estructura actual pero añadimos el filtro createdBy.
+        // Voy a reestructurar para que sea más limpio.
+      } else if (filters.finalizada === true) {
+        constraints.push(where('finalizada', '==', true));
+      }
+    } else {
+      // Sin filtro de finalizada: traer todas (incluye las que no tienen campo finalizada)
+      // No se añade where para finalizada
+    }
+    
+    // 🔥 NUEVO: Filtro por creador (solo si se proporciona)
+    if (filters.createdBy) {
+      constraints.push(where('createdBy', '==', filters.createdBy));
+    }
+    
+    if (filters.orderByNumber) {
+      constraints.push(orderBy('orderNumber', 'desc'));
+    }
+    
+    if (filters.startAfter) {
+      constraints.push(startAfter(filters.startAfter));
+    }
+    constraints.push(limit(limitSize));
+    
+    // Para el caso especial de finalizada === false, necesitamos manejar los undefined.
+    // Mantendré la lógica original para ese caso, pero añadiendo el filtro createdBy.
+    // Para simplificar, te propongo usar una única consulta que incluya también las tareas sin campo finalizada
+    // usando un OR, pero Firestore no soporta OR directo. Así que mantendré la lógica actual.
+    
+    // Dado que tu lógica original para finalizada === false es compleja (une dos consultas),
+    // vamos a modificar esa parte para que también aplique el filtro createdBy.
+    
     if (filters.finalizada === false) {
-      // Para "NO finalizadas": NECESITAMOS UNA SOLA CONSULTA CON startAfter
-      // Primero obtenemos las tareas con finalizada = false usando paginación
-      const constraints1: QueryConstraint[] = [where('finalizada', '==', false)];
-      if (filters.orderByNumber) constraints1.push(orderBy('orderNumber', 'desc'));
+      // Consulta para finalizada == false
+      const constraintsFalse: QueryConstraint[] = [where('finalizada', '==', false)];
+      if (filters.createdBy) constraintsFalse.push(where('createdBy', '==', filters.createdBy));
+      if (filters.orderByNumber) constraintsFalse.push(orderBy('orderNumber', 'desc'));
+      if (filters.startAfter) constraintsFalse.push(startAfter(filters.startAfter));
+      constraintsFalse.push(limit(limitSize));
+      const qFalse = query(tasksRef, ...constraintsFalse);
+      const snapshotFalse = await getDocs(qFalse);
+      const tasksFalse = snapshotFalse.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
       
-      // Aplicar startAfter si existe
-      if (filters.startAfter) {
-        constraints1.push(startAfter(filters.startAfter));
-      }
-      constraints1.push(limit(limitSize));
+      // Consulta para tareas sin campo finalizada (undefined)
+      const constraintsUndef: QueryConstraint[] = [];
+      if (filters.createdBy) constraintsUndef.push(where('createdBy', '==', filters.createdBy));
+      if (filters.orderByNumber) constraintsUndef.push(orderBy('orderNumber', 'desc'));
+      if (filters.startAfter) constraintsUndef.push(startAfter(filters.startAfter));
+      constraintsUndef.push(limit(limitSize));
+      const qUndef = query(tasksRef, ...constraintsUndef);
+      const snapshotUndef = await getDocs(qUndef);
+      const tasksUndef = snapshotUndef.docs
+        .filter((doc: any) => doc.data().finalizada === undefined)
+        .map((doc: any) => ({ id: doc.id, ...doc.data() }));
       
-      const q1 = query(tasksRef, ...constraints1);
-      
-      let snapshot1;
-      
-      if (this.isOnline) {
-        try {
-          snapshot1 = await getDocs(q1);
-        } catch (error) {
-          console.warn('⚠️ Error de servidor, usando caché');
-          snapshot1 = await getDocs(q1);
-        }
-      } else {
-        snapshot1 = await getDocs(q1);
-      }
-      
-      // Procesar resultados de finalizada = false
-      const tasks1 = snapshot1.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Guardar último visible para paginación
-      if (snapshot1.docs.length > 0) {
-        lastVisible = snapshot1.docs[snapshot1.docs.length - 1];
-      }
-      
-      // Si no hay suficientes tareas con finalizada = false, buscar tareas sin el campo
-      if (tasks1.length < limitSize) {
-        // Calcular cuántas faltan
-        const remainingNeeded = limitSize - tasks1.length;
-        
-        // Consulta para tareas sin el campo finalizada
-        const q2 = query(tasksRef);
-        let snapshot2;
-        
-        if (this.isOnline) {
-          try {
-            snapshot2 = await getDocs(q2);
-          } catch (error) {
-            console.warn('⚠️ Error de servidor, usando caché');
-            snapshot2 = await getDocs(q2);
-          }
-        } else {
-          snapshot2 = await getDocs(q2);
-        }
-        
-        // Filtrar solo las que NO tienen el campo finalizada
-        const tasks2 = snapshot2.docs
-          .filter(doc => {
-            const data = doc.data();
-            return data.finalizada === undefined;
-          })
-          .map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Ordenar si es necesario
-        if (filters.orderByNumber) {
-          tasks2.sort((a, b) => (b.orderNumber || 0) - (a.orderNumber || 0));
-        }
-        
-        // Tomar solo las que necesitamos
-        const tasks2Needed = tasks2.slice(0, remainingNeeded);
-        
-        // Combinar resultados
-        allTasks = [...tasks1, ...tasks2Needed];
-      } else {
-        allTasks = tasks1;
-      }
-      
-      // Eliminar duplicados por si acaso
+      // Combinar, eliminar duplicados y ordenar
+      allTasks = [...tasksFalse, ...tasksUndef];
       const uniqueIds = new Set();
       allTasks = allTasks.filter(task => {
-        if (uniqueIds.has(task.id)) {
-          return false;
-        }
+        if (uniqueIds.has(task.id)) return false;
         uniqueIds.add(task.id);
         return true;
       });
-      
-    } else if (filters.finalizada === true) {
-      // Para finalizadas, consulta directa con paginación
-      const constraints: QueryConstraint[] = [where('finalizada', '==', true)];
-      if (filters.orderByNumber) constraints.push(orderBy('orderNumber', 'desc'));
-      
-      if (filters.startAfter) {
-        constraints.push(startAfter(filters.startAfter));
+      if (filters.orderByNumber) {
+        allTasks.sort((a, b) => (b.orderNumber || 0) - (a.orderNumber || 0));
       }
-      constraints.push(limit(limitSize));
-      
-      const q = query(tasksRef, ...constraints);
-      
-      let snapshot;
-      if (this.isOnline) {
-        try {
-          snapshot = await getDocs(q);
-        } catch (error) {
-          console.warn('⚠️ Error de servidor, usando caché');
-          snapshot = await getDocs(q);
-        }
-      } else {
-        snapshot = await getDocs(q);
-      }
-      
-      allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      lastVisible = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+      lastVisible = snapshotFalse.docs.length > 0 ? snapshotFalse.docs[snapshotFalse.docs.length - 1] : null;
       
     } else {
-      // Sin filtro (todos) - consulta directa con paginación
-      const constraints: QueryConstraint[] = [];
-      if (filters.orderByNumber) constraints.push(orderBy('orderNumber', 'desc'));
-      
-      if (filters.startAfter) {
-        constraints.push(startAfter(filters.startAfter));
-      }
-      constraints.push(limit(limitSize));
-      
+      // Para finalizada === true o sin filtro, usamos una sola consulta
       const q = query(tasksRef, ...constraints);
-      
-      let snapshot;
-      if (this.isOnline) {
-        try {
-          snapshot = await getDocs(q);
-        } catch (error) {
-          console.warn('⚠️ Error de servidor, usando caché');
-          snapshot = await getDocs(q);
-        }
-      } else {
-        snapshot = await getDocs(q);
-      }
-      
-      allTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const snapshot = await getDocs(q);
+      allTasks = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
       lastVisible = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
     }
     
-    console.log(`✅ ${allTasks.length} tareas cargadas (${filters.finalizada === false ? 'no finalizadas' : filters.finalizada === true ? 'finalizadas' : 'todas'})`);
     return { tasks: allTasks, lastVisible };
     
   } catch (error) {
@@ -700,6 +649,10 @@ async getFilteredTasksPaginated(
     return { tasks: [], lastVisible: null };
   }
 }
+
+
+
+
 
   async getTasksForAllUsers(ownerUid: string, filters: any = {}): Promise<any[]> {
     try {
@@ -778,7 +731,7 @@ async getFilteredTasksPaginated(
         return [];
       }
       
-      const collectionRef = collection(this.db.firestore, parentPath, subcollectionName);
+      const collectionRef = collection(this.firestoreModular, parentPath, subcollectionName);
       
       let snapshot;
       
@@ -796,7 +749,7 @@ async getFilteredTasksPaginated(
         console.log(`💾 ${snapshot.size} documentos desde caché (offline)`);
       }
       
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
       
     } catch (error) {
       console.error('Error en getSubcollection:', error);
@@ -820,7 +773,7 @@ async getFilteredTasksPaginated(
         throw new Error('No hay conexión a internet');
       }
       
-      const collectionRef = collection(this.db.firestore, path, subcollectionName);
+      const collectionRef = collection(this.firestoreModular, path, subcollectionName);
       const dataToAdd = {
         ...object,
         createdAt_server: new Date().toISOString()
@@ -856,7 +809,7 @@ async getFilteredTasksPaginated(
         throw new Error('No hay conexión a internet');
       }
       
-      const docRef = doc(this.db.firestore, path);
+      const docRef = doc(this.firestoreModular, path);
       const dataToUpdate = {
         ...object,
         updatedAt_server: new Date().toISOString()
@@ -892,7 +845,7 @@ async getFilteredTasksPaginated(
         throw new Error('No hay conexión a internet');
       }
       
-      const docRef = doc(this.db.firestore, path);
+      const docRef = doc(this.firestoreModular, path);
       await deleteDoc(docRef);
       console.log(`✅ Documento eliminado: ${path}`);
       
@@ -911,7 +864,7 @@ async getFilteredTasksPaginated(
 
   async setUserRole(uid: string, userData: { name: string; email: string; role?: 'admin' | 'operario' }): Promise<void> {
     try {
-      const userRef = doc(this.db.firestore, `users/${uid}`);
+      const userRef = doc(this.firestoreModular, `users/${uid}`);
       const userDoc = await getDoc(userRef);
       
       if (!userDoc.exists()) {
@@ -935,7 +888,7 @@ async getFilteredTasksPaginated(
 
   async getUserData(uid: string): Promise<User | null> {
     try {
-      const userRef = doc(this.db.firestore, `users/${uid}`);
+      const userRef = doc(this.firestoreModular, `users/${uid}`);
       const userDoc = await getDoc(userRef);
       
       if (userDoc.exists()) {
@@ -972,7 +925,7 @@ async getFilteredTasksPaginated(
         throw new Error('No hay conexión a internet');
       }
       
-      const tasksRef = collection(this.db.firestore, `users/${ownerUid}/tasks`);
+      const tasksRef = collection(this.firestoreModular, `users/${ownerUid}/tasks`);
       
       const dataToAdd = {
         ...taskData,
@@ -994,4 +947,486 @@ async getFilteredTasksPaginated(
       throw error;
     }
   }
+
+
+// ===== MANTENIMIENTO CHECKLISTS =====
+
+/**
+ * Guarda un nuevo checklist de mantenimiento
+ */
+// Guardar checklist en colección GLOBAL (no por usuario)
+// Guardar checklist
+async saveMaintenanceCheck(checkData: MaintenanceCheck): Promise<string> {
+  const user = await this.auth.authState.pipe(take(1)).toPromise();
+  if (!user) throw new Error('No autenticado');
+  if (!this.isOnline) throw new Error('Sin conexión');
+
+  const path = `users/${this.MAINTENANCE_OWNER_UID}/maintenanceChecks`;
+  console.log('💾 Guardando en ruta:', path);
+  console.log('📦 Datos a guardar:', JSON.stringify(checkData));
+  
+  const checksRef = collection(this.firestoreModular, path);
+  const docRef = await addDoc(checksRef, {
+    ...checkData,
+    createdAt: new Date().toISOString(),
+    createdBy: user.uid,
+    createdByName: (await this.getUserData(user.uid))?.name || 'Desconocido'
+  });
+  console.log('✅ Documento guardado con ID:', docRef.id);
+  return docRef.id;
+}
+
+/**
+ * Obtiene todos los checklists de una sucursal (ordenados por fecha descendente)
+ */
+async getMaintenanceChecksBySucursal(sucursal: string): Promise<MaintenanceCheck[]> {
+  try {
+    const checksRef = collection(this.firestoreModular, `users/${this.MAINTENANCE_OWNER_UID}/maintenanceChecks`);
+    const q = query(checksRef, where('sucursal', '==', sucursal), orderBy('fecha', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MaintenanceCheck));
+  } catch (error) {
+    console.error('Error obteniendo checklists:', error);
+    return [];
+  }
+}
+
+/**
+ * Actualiza un checklist existente
+ */
+async updateMaintenanceCheck(checkId: string, updatedData: Partial<MaintenanceCheck>): Promise<void> {
+  try {
+    const checkRef = doc(this.firestoreModular, `users/${this.MAINTENANCE_OWNER_UID}/maintenanceChecks/${checkId}`);
+    await updateDoc(checkRef, {
+      ...updatedData,
+      updatedAt: new Date().toISOString()
+    });
+    console.log(`✅ Checklist ${checkId} actualizado`);
+  } catch (error) {
+    console.error('Error actualizando checklist:', error);
+    throw error;
+  }
+}
+
+
+// Obtener todos los checks de un mes específico (para carga inicial)
+// Obtener todos los checks de un mes específico (global)
+async getMaintenanceChecksByMonth(year: number, month: number): Promise<MaintenanceCheck[]> {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0);
+  const path = `users/${this.MAINTENANCE_OWNER_UID}/maintenanceChecks`;
+  console.log(`🔍 Leyendo desde ruta: ${path}`);
+  console.log(`📅 Filtro: fecha entre ${startDate.toISOString()} y ${endDate.toISOString()}`);
+  
+  const checksRef = collection(this.firestoreModular, path);
+  const q = query(
+    checksRef,
+    where('fecha', '>=', startDate.toISOString()),
+    where('fecha', '<=', endDate.toISOString())
+  );
+  const snapshot = await getDocs(q);
+  console.log(`📄 Documentos encontrados: ${snapshot.docs.length}`);
+  snapshot.docs.forEach(doc => {
+    const data = doc.data() as any;
+    console.log(` - ${doc.id}: ${data.sucursal} - ${data.fecha}`);
+  });
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MaintenanceCheck));
+}
+
+
+
+// Obtener un check específico por sucursal y mes (global)
+async getMaintenanceCheckBySucursalAndMonth(sucursal: string, year: number, month: number): Promise<MaintenanceCheck | null> {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0);
+  const path = `users/${this.MAINTENANCE_OWNER_UID}/maintenanceChecks`;
+  console.log(`🔍 Buscando check para sucursal ${sucursal} en ${year}/${month}`);
+  console.log(`Ruta: ${path}`);
+  
+  const checksRef = collection(this.firestoreModular, path);
+  const q = query(
+    checksRef,
+    where('sucursal', '==', sucursal),
+    where('fecha', '>=', startDate.toISOString()),
+    where('fecha', '<=', endDate.toISOString()),
+    limit(1)
+  );
+  const snapshot = await getDocs(q);
+  if (!snapshot.empty) {
+    const doc = snapshot.docs[0];
+    console.log(`✅ Encontrado: ${doc.id}`, doc.data());
+    return { id: doc.id, ...doc.data() } as MaintenanceCheck;
+  }
+  console.log(`❌ No encontrado`);
+  return null;
+}
+
+/**
+ * Obtiene tareas finalizadas dentro de un rango de fechas (optimizado para reportes)
+ */
+async getTareasFinalizadasPorRango(userId: string, fechaInicio: Date, fechaFin: Date): Promise<Task[]> {
+  console.log(`🔍 [Firebase] getTareasFinalizadasPorRango | ${fechaInicio.toISOString()} - ${fechaFin.toISOString()}`);
+  console.time('[Firebase] consulta_rango');
+  
+  try {
+    const tasksRef = collection(this.firestoreModular, `users/${userId}/tasks`);
+    // Consulta compuesta: finalizada == true y createdAt dentro del rango
+    const q = query(
+      tasksRef,
+      where('finalizada', '==', true),
+      where('createdAt', '>=', fechaInicio.toISOString()),
+      where('createdAt', '<=', fechaFin.toISOString()),
+      orderBy('createdAt', 'desc') // orden opcional
+    );
+    const snapshot = await getDocsFromServer(q);
+    const tasks = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    console.timeEnd('[Firebase] consulta_rango');
+    console.log(`✅ ${tasks.length} tareas en el rango`);
+    return tasks;
+  } catch (error) {
+    console.error('Error en getTareasFinalizadasPorRango:', error);
+    // Fallback a la consulta anterior si falla el índice
+    console.log('⚠️ Fallback: obteniendo todas y filtrando en cliente...');
+    const todas = await this.getFilteredTasks(userId, { finalizada: true });
+    return todas.filter(task => {
+      if (!task.createdAt) return false;
+      const fecha = new Date(task.createdAt);
+      return fecha >= fechaInicio && fecha <= fechaFin;
+    });
+  }
+}
+
+
+// ========== INSUMOS (STOCK GLOBAL) ==========
+async getInsumos(ownerUid: string): Promise<Insumo[]> {
+  console.log('🔍 getInsumos llamado con ownerUid:', ownerUid);
+  const path = `users/${ownerUid}/insumos`;
+  console.log('📁 Path de Firestore:', path);
+  const collRef = collection(this.firestoreModular, path);
+  try {
+    const snapshot = await getDocs(collRef);
+    console.log(`📊 Documentos encontrados: ${snapshot.size}`);
+    const insumos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Insumo));
+    console.log('✅ Insumos obtenidos:', insumos);
+    return insumos;
+  } catch (error) {
+    console.error('❌ Error en getInsumos:', error);
+    throw error;
+  }
+}
+
+async addInsumo(ownerUid: string, insumo: Omit<Insumo, 'id'>): Promise<void> {
+  console.log('➕ addInsumo llamado con ownerUid:', ownerUid, 'insumo:', insumo);
+  const path = `users/${ownerUid}/insumos`;
+  const collRef = collection(this.firestoreModular, path);
+  const dataToAdd = {
+    ...insumo,
+    createdAt: new Date().toISOString()
+  };
+  console.log('📝 Datos a guardar:', dataToAdd);
+  try {
+    const docRef = await addDoc(collRef, dataToAdd);
+    console.log('✅ Documento creado con ID:', docRef.id);
+  } catch (error) {
+    console.error('❌ Error en addInsumo:', error);
+    throw error;
+  }
+}
+
+async updateInsumo(ownerUid: string, insumoId: string, data: Partial<Insumo>): Promise<void> {
+  const docRef = doc(this.firestoreModular, `users/${ownerUid}/insumos/${insumoId}`);
+  await updateDoc(docRef, data);
+}
+
+// ========== STOCK POR SUCURSAL ==========
+async getSucursalStock(ownerUid: string, sucursal: string): Promise<MaterialSucursal[]> {
+  const docRef = doc(this.firestoreModular, `users/${ownerUid}/sucursalesStock/${sucursal}`);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return [];
+  const data = snap.data();
+  return data['materiales'] || [];
+}
+
+async asignarMaterialASucursal(
+  ownerUid: string,
+  insumoId: string,
+  insumoNombre: string,
+  unidad: string,
+  sucursal: string,
+  cantidadAsignar: number
+): Promise<void> {
+  const insumoRef = doc(this.firestoreModular, `users/${ownerUid}/insumos/${insumoId}`);
+  const sucursalRef = doc(this.firestoreModular, `users/${ownerUid}/sucursalesStock/${sucursal}`);
+
+  await runTransaction(this.firestoreModular, async (transaction) => {
+    // ✅ PRIMERO: TODAS LAS LECTURAS JUNTAS
+    const [insumoSnap, sucursalSnap] = await Promise.all([
+      transaction.get(insumoRef),
+      transaction.get(sucursalRef)
+    ]);
+
+    // Validaciones
+    if (!insumoSnap.exists()) throw new Error('Insumo no existe');
+    const stockActual = insumoSnap.data()['cantidad'] || 0;
+    if (stockActual < cantidadAsignar) {
+      throw new Error(`Stock insuficiente: ${stockActual} ${unidad} disponibles`);
+    }
+
+    const now = new Date().toISOString();
+
+    // ✅ SEGUNDO: TODAS LAS ESCRITURAS
+    transaction.update(insumoRef, { cantidad: stockActual - cantidadAsignar });
+
+    if (!sucursalSnap.exists()) {
+      transaction.set(sucursalRef, {
+        materiales: [{
+          insumoId,
+          nombre: insumoNombre,
+          cantidad: cantidadAsignar,
+          unidad,
+          ultimaAsignacion: now
+        }]
+      });
+    } else {
+      const data = sucursalSnap.data();
+      let materiales = data['materiales'] || [];
+      const idx = materiales.findIndex((m: any) => m.insumoId === insumoId);
+      if (idx >= 0) {
+        materiales[idx].cantidad += cantidadAsignar;
+        materiales[idx].ultimaAsignacion = now;
+      } else {
+        materiales.push({
+          insumoId,
+          nombre: insumoNombre,
+          cantidad: cantidadAsignar,
+          unidad,
+          ultimaAsignacion: now
+        });
+      }
+      transaction.update(sucursalRef, { materiales });
+    }
+  });
+}
+
+
+
+
+// Eliminar insumo
+async deleteInsumo(ownerUid: string, insumoId: string): Promise<void> {
+  const docRef = doc(this.firestoreModular, `users/${ownerUid}/insumos/${insumoId}`);
+  await deleteDoc(docRef);
+}
+
+// ========== MOVIMIENTOS Y CONSUMO EN SUCURSAL ==========
+
+/**
+ * Registrar consumo de material en una sucursal con número de orden
+ */
+async usarMaterialEnSucursal(
+  ownerUid: string,
+  sucursal: string,
+  insumoId: string,
+  cantidad: number,
+  ordenTrabajo?: string,
+  observacion?: string
+): Promise<void> {
+  const sucursalRef = doc(this.firestoreModular, `users/${ownerUid}/sucursalesStock/${sucursal}`);
+  const movimientosRef = collection(sucursalRef, 'movimientos');
+
+  await runTransaction(this.firestoreModular, async (transaction) => {
+    const snap = await transaction.get(sucursalRef);
+    if (!snap.exists()) throw new Error('Sucursal no encontrada');
+    
+    const materiales = snap.data()['materiales'] || [];
+    const index = materiales.findIndex((m: any) => m.insumoId === insumoId);
+    if (index === -1) throw new Error('Material no encontrado en esta sucursal');
+    
+    const material = materiales[index];
+    if (material.cantidad < cantidad) throw new Error(`Stock insuficiente: solo ${material.cantidad} ${material.unidad}`);
+
+    // Actualizar stock en sucursal
+    material.cantidad -= cantidad;
+    materiales[index] = material;
+    transaction.update(sucursalRef, { materiales });
+
+    // Obtener usuario actual
+    const user = await this.auth.authState.pipe(take(1)).toPromise();
+    const usuarioEmail = user?.email || 'desconocido';
+
+    // Registrar movimiento
+    const movimiento: Omit<MovimientoMaterial, 'id'> = {
+      insumoId,
+      nombre: material.nombre,
+      tipo: 'consumo',
+      cantidad,
+      unidad: material.unidad,
+      fecha: new Date().toISOString(),
+      ordenTrabajo,
+      observacion: observacion || `Consumo en ${sucursal}`,
+      usuario: usuarioEmail
+    };
+    transaction.set(doc(movimientosRef), movimiento);
+  });
+}
+
+/**
+ * Obtener historial de movimientos de un material en una sucursal
+ */
+async getMovimientosMaterial(
+  ownerUid: string,
+  sucursal: string,
+  insumoId: string
+): Promise<MovimientoMaterial[]> {
+  const movimientosRef = collection(
+    this.firestoreModular,
+    `users/${ownerUid}/sucursalesStock/${sucursal}/movimientos`
+  );
+  const q = query(movimientosRef, where('insumoId', '==', insumoId), orderBy('fecha', 'desc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MovimientoMaterial));
+}
+
+
+/**
+ * Eliminar completamente un material de una sucursal y devolver el stock al inventario central.
+ */
+async eliminarMaterialDeSucursal(
+  ownerUid: string,
+  sucursal: string,
+  insumoId: string,
+  cantidadADevolver: number,
+  unidad: string
+): Promise<void> {
+  const insumoRef = doc(this.firestoreModular, `users/${ownerUid}/insumos/${insumoId}`);
+  const sucursalRef = doc(this.firestoreModular, `users/${ownerUid}/sucursalesStock/${sucursal}`);
+
+  await runTransaction(this.firestoreModular, async (transaction) => {
+    // 🔥 LEER TODO PRIMERO
+    const [insumoSnap, sucursalSnap] = await Promise.all([
+      transaction.get(insumoRef),
+      transaction.get(sucursalRef)
+    ]);
+
+    if (!insumoSnap.exists()) throw new Error('Insumo no existe en stock central');
+    const stockActual = insumoSnap.data()['cantidad'] || 0;
+    const nuevoStock = stockActual + cantidadADevolver;
+
+    if (!sucursalSnap.exists()) throw new Error('Sucursal no encontrada');
+    let materiales = sucursalSnap.data()['materiales'] || [];
+    const nuevoArray = materiales.filter((m: any) => m.insumoId !== insumoId);
+
+    // 🔥 AHORA SÍ, LAS ESCRITURAS
+    transaction.update(insumoRef, { cantidad: nuevoStock });
+    transaction.update(sucursalRef, { materiales: nuevoArray });
+  });
+}
+
+/**
+ * Eliminar un movimiento específico del historial
+ */
+async eliminarMovimiento(ownerUid: string, sucursal: string, movimientoId: string): Promise<void> {
+  const movimientoRef = doc(this.firestoreModular, `users/${ownerUid}/sucursalesStock/${sucursal}/movimientos/${movimientoId}`);
+  await deleteDoc(movimientoRef);
+}
+
+
+/**
+ * Transferir material entre sucursales
+ */
+async transferirMaterialEntreSucursales(
+  ownerUid: string,
+  sucursalOrigen: string,
+  sucursalDestino: string,
+  insumoId: string,
+  cantidad: number,
+  unidad: string,
+  nombreMaterial: string
+): Promise<void> {
+  const origenRef = doc(this.firestoreModular, `users/${ownerUid}/sucursalesStock/${sucursalOrigen}`);
+  const destinoRef = doc(this.firestoreModular, `users/${ownerUid}/sucursalesStock/${sucursalDestino}`);
+  const now = new Date().toISOString();
+  
+  // Obtener usuario actual
+  const user = await this.auth.authState.pipe(take(1)).toPromise();
+  const usuarioEmail = user?.email || 'desconocido';
+
+  await runTransaction(this.firestoreModular, async (transaction) => {
+    // Leer ambas sucursales
+    const [origenSnap, destinoSnap] = await Promise.all([
+      transaction.get(origenRef),
+      transaction.get(destinoRef)
+    ]);
+
+    if (!origenSnap.exists()) throw new Error('Sucursal origen no encontrada');
+    
+    // Procesar origen
+    let materialesOrigen = origenSnap.data()['materiales'] || [];
+    const idxOrigen = materialesOrigen.findIndex((m: any) => m.insumoId === insumoId);
+    if (idxOrigen === -1) throw new Error('Material no encontrado en sucursal origen');
+    const materialOrigen = materialesOrigen[idxOrigen];
+    if (materialOrigen.cantidad < cantidad) throw new Error('Stock insuficiente en origen');
+
+    // Restar en origen
+    materialOrigen.cantidad -= cantidad;
+    if (materialOrigen.cantidad === 0) {
+      materialesOrigen.splice(idxOrigen, 1);
+    } else {
+      materialesOrigen[idxOrigen] = materialOrigen;
+    }
+    transaction.update(origenRef, { materiales: materialesOrigen });
+
+    // Procesar destino
+    let materialesDestino = destinoSnap.exists() ? (destinoSnap.data()['materiales'] || []) : [];
+    const idxDestino = materialesDestino.findIndex((m: any) => m.insumoId === insumoId);
+    if (idxDestino >= 0) {
+      materialesDestino[idxDestino].cantidad += cantidad;
+      materialesDestino[idxDestino].ultimaAsignacion = now;
+    } else {
+      materialesDestino.push({
+        insumoId,
+        nombre: nombreMaterial,
+        cantidad: cantidad,
+        unidad: unidad,
+        ultimaAsignacion: now
+      });
+    }
+    // Si el documento destino no existe, lo creamos con set; si existe, actualizamos
+    if (!destinoSnap.exists()) {
+      transaction.set(destinoRef, { materiales: materialesDestino });
+    } else {
+      transaction.update(destinoRef, { materiales: materialesDestino });
+    }
+
+    // Registrar movimiento en origen (tipo traslado salida)
+    const movimientosOrigenRef = collection(origenRef, 'movimientos');
+    const movimientoOrigen: Omit<MovimientoMaterial, 'id'> = {
+      insumoId,
+      nombre: nombreMaterial,
+      tipo: 'traslado',
+      cantidad,
+      unidad,
+      fecha: now,
+      sucursalDestino,
+      observacion: `Transferido a ${sucursalDestino}`,
+      usuario: usuarioEmail
+    };
+    transaction.set(doc(movimientosOrigenRef), movimientoOrigen);
+
+    // Registrar movimiento en destino (tipo traslado entrada)
+    const movimientosDestinoRef = collection(destinoRef, 'movimientos');
+    const movimientoDestino: Omit<MovimientoMaterial, 'id'> = {
+      insumoId,
+      nombre: nombreMaterial,
+      tipo: 'traslado',
+      cantidad,
+      unidad,
+      fecha: now,
+      sucursalOrigen,
+      observacion: `Recibido de ${sucursalOrigen}`,
+      usuario: usuarioEmail
+    };
+    transaction.set(doc(movimientosDestinoRef), movimientoDestino);
+  });
+}
+
 }

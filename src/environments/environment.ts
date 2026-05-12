@@ -16,7 +16,8 @@ export const environment = {
   
     messagingSenderId: "335156814976",
   
-    appId: "1:335156814976:web:56176bc91a415cfa53b265"
+    appId: "1:335156814976:web:56176bc91a415cfa53b265",
+    vapidKey: 'yqZBDgIerOnN9iNsm3bKi8GwecfymgbIwXCkAHjeC8c'
   
   }
   

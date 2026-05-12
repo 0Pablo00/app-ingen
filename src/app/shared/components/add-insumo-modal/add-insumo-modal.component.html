@@ -1,0 +1,68 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar class="modal-toolbar">
+    <ion-title>{{ insumo ? 'Editar Insumo' : 'Agregar Insumo' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon slot="icon-only" name="close-circle-outline" color="light"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="form">
+    
+    <!-- Campo Nombre -->
+    <ion-item lines="none">
+      <ion-label position="stacked">Nombre del Producto *</ion-label>
+      <ion-input 
+        formControlName="nombre" 
+        type="text" 
+        placeholder="Ej. Plafón LED 18W">
+      </ion-input>
+    </ion-item>
+
+    <!-- Campo Cantidad -->
+    <ion-item lines="none">
+      <ion-label position="stacked">Cantidad</ion-label>
+      <ion-input 
+        formControlName="cantidad" 
+        type="number" 
+        min="0" 
+        placeholder="0">
+      </ion-input>
+    </ion-item>
+
+    <!-- Campo Unidad -->
+    <ion-item lines="none">
+      <ion-label position="stacked">Unidad de medida</ion-label>
+      <ion-select 
+        formControlName="unidad" 
+        interface="action-sheet" 
+        placeholder="Seleccionar unidad">
+        <ion-select-option *ngFor="let u of unidades" [value]="u">{{ u }}</ion-select-option>
+      </ion-select>
+    </ion-item>
+
+    <!-- Campo Observación -->
+    <ion-item lines="none">
+      <ion-label position="stacked">Observaciones (Opcional)</ion-label>
+      <ion-input 
+        formControlName="observacion" 
+        type="text" 
+        placeholder="Detalles adicionales...">
+      </ion-input>
+    </ion-item>
+
+    <!-- Botón de acción -->
+    <ion-button 
+      expand="block" 
+      (click)="guardar()" 
+      [disabled]="form.invalid" 
+      class="btn-guardar">
+      <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+      {{ insumo ? 'Actualizar Insumo' : 'Agregar Insumo' }}
+    </ion-button>
+    
+  </form>
+</ion-content>

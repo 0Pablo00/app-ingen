@@ -20,6 +20,8 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
+                "src/manifest.webmanifest", 
+                "src/firebase-messaging-sw.js", 
               {
                 "glob": "**/*",
                 "input": "src/assets",
@@ -55,6 +57,7 @@
                 }
               ],
               "outputHashing": "all"
+             
             },
             "development": {
               "buildOptimizer": false,
