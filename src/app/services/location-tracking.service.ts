@@ -10,11 +10,15 @@ const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('Backg
 export class LocationTrackingService {
 
   private watcherId: string | null = null;
-  private intervalId: any = null;          // Para el intervalo de prueba
 
   constructor(private afs: AngularFirestore) {}
 
   async iniciarSeguimiento(idTecnico: string) {
+    // 🔥 Si ya hay un watcher activo, lo detenemos antes de crear uno nuevo
+    if (this.watcherId) {
+      await this.detenerSeguimiento();
+    }
+
     // Configuración del watcher (segundo plano)
     const watcherOptions: WatcherOptions = {
       backgroundMessage: 'App rastreando tu ubicación',
@@ -39,25 +43,6 @@ export class LocationTrackingService {
       }
     );
     console.log('▶️ Watcher iniciado (ID):', this.watcherId, 'para técnico:', idTecnico);
-
-    // 🔥 Intervalo de prueba: cada 10 segundos pide una ubicación (solo primer plano)
-    this.intervalId = setInterval(async () => {
-      try {
-        // Casteo a any para evitar error de tipo
-        const pos = await (BackgroundGeolocation as any).getCurrentPosition({
-          timeout: 5000,
-          maximumAge: 0,
-          desiredAccuracy: 10,
-        });
-        if (pos) {
-          console.log('⏱️ Intervalo - Ubicación:', pos);
-          this.guardarUbicacion(idTecnico, pos);
-        }
-      } catch (e) {
-        console.warn('Error en getCurrentPosition (puede ser normal si el GPS no está listo):', e);
-      }
-    }, 10000);   // cada 10 segundos
-    console.log('⏱️ Intervalo de prueba (10s) iniciado para primer plano');
   }
 
   async detenerSeguimiento() {
@@ -66,12 +51,6 @@ export class LocationTrackingService {
       await BackgroundGeolocation.removeWatcher({ id: this.watcherId });
       console.log('⏹️ Watcher detenido:', this.watcherId);
       this.watcherId = null;
-    }
-    // Detener intervalo
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-      console.log('⏹️ Intervalo de prueba detenido');
     }
   }
 

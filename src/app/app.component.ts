@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { UtilsService } from './services/utils.service';
 import { Capacitor } from '@capacitor/core';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { App } from '@capacitor/app';                    // ← NUEVO
 import { NotificationService } from './services/notification.service';
 import { LocationTrackingService } from './services/location-tracking.service';
 
@@ -13,13 +14,14 @@ import { LocationTrackingService } from './services/location-tracking.service';
 export class AppComponent {
   constructor(
     private utilsSvc: UtilsService,
-    private notificationSvc: NotificationService,  // ← AGREGADO
+    private notificationSvc: NotificationService,
+    private trackingService: LocationTrackingService   // ← NUEVO
   ) {
     this.initializeApp();
     this.showSplash();
   }
 
-  async showSplash(){
+  async showSplash() {
     await SplashScreen.show({
       autoHide: true,
       showDuration: 3000
@@ -28,11 +30,10 @@ export class AppComponent {
 
   async initializeApp() {
 
-    
     // Manejo global de errores no capturados
     window.addEventListener('unhandledrejection', (event) => {
       console.error('❌ Error no manejado:', event.reason);
-      
+
       if (event.reason?.code === 'permission-denied') {
         this.utilsSvc.presentToast({
           message: 'Error de permisos. Por favor inicia sesión nuevamente.',
@@ -69,68 +70,92 @@ export class AppComponent {
       this.checkForUpdates();
     }, 3000);
 
-    // 🔥 NUEVO: Inicializar notificaciones PWA
+    // Inicializar notificaciones PWA
     setTimeout(() => {
       this.initNotifications();
     }, 5000);
 
-    
+    // 🔥 NUEVO: Iniciar rastreo si hay un usuario autenticado (localStorage)
+    setTimeout(async () => {
+      await this.iniciarRastreoSiUsuarioAutenticado();
+    }, 2000);
+
+    // 🔥 NUEVO: Escuchar cuando la app vuelve a primer plano para reactivar rastreo
+    App.addListener('appStateChange', async (state) => {
+      if (state.isActive) {
+        await this.iniciarRastreoSiUsuarioAutenticado();
+      }
+    });
   }
 
-  // 🔥 NUEVO: Método para inicializar notificaciones
-async initNotifications() {
-  try {
-    // Obtener el uid desde localStorage (donde se guarda el usuario)
-    let userId = null;
-    
-    // Intentar obtener del objeto user
+  // 🔥 NUEVO: Método para iniciar el rastreo si hay usuario guardado
+  private async iniciarRastreoSiUsuarioAutenticado() {
+    if (!Capacitor.isNativePlatform()) return;
+
     const userStr = localStorage.getItem('user');
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        userId = user.uid;
-      } catch(e) {
-        console.log('Error parseando user:', e);
+        if (user.uid) {
+          await this.trackingService.iniciarSeguimiento(user.uid);
+          console.log('🟢 Rastreo GPS reactivado para', user.uid);
+        }
+      } catch (e) {
+        console.error('Error al parsear usuario de localStorage', e);
       }
     }
-    
-    // Si no, intentar con uid directo
-    if (!userId) {
-      userId = localStorage.getItem('uid');
-    }
-    
-    if (userId) {
-      console.log('🔄 Inicializando notificaciones para usuario:', userId);
-      const token = await this.notificationSvc.requestPermissionAndGetToken(userId);
-      if (token) {
-        console.log('✅ Token FCM obtenido correctamente');
-        this.notificationSvc.listenToMessages();
-      } else {
-        console.log('⚠️ No se pudo obtener token de notificaciones');
-      }
-    } else {
-      console.log('⚠️ Usuario no autenticado, notificaciones no inicializadas');
-    }
-  } catch (error) {
-    console.error('❌ Error al inicializar notificaciones:', error);
   }
-}
 
+  // Método para inicializar notificaciones
+  async initNotifications() {
+    try {
+      let userId = null;
+
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          userId = user.uid;
+        } catch (e) {
+          console.log('Error parseando user:', e);
+        }
+      }
+
+      if (!userId) {
+        userId = localStorage.getItem('uid');
+      }
+
+      if (userId) {
+        console.log('🔄 Inicializando notificaciones para usuario:', userId);
+        const token = await this.notificationSvc.requestPermissionAndGetToken(userId);
+        if (token) {
+          console.log('✅ Token FCM obtenido correctamente');
+          this.notificationSvc.listenToMessages();
+        } else {
+          console.log('⚠️ No se pudo obtener token de notificaciones');
+        }
+      } else {
+        console.log('⚠️ Usuario no autenticado, notificaciones no inicializadas');
+      }
+    } catch (error) {
+      console.error('❌ Error al inicializar notificaciones:', error);
+    }
+  }
 
   async checkForUpdates() {
     try {
       console.log('🔄 Verificando actualizaciones...');
-      
+
       // MÉTODO 1: Usar Capacitor.Plugins (el más confiable)
       try {
-        const plugins = (Capacitor as any).getPlugin('LiveUpdates') || 
+        const plugins = (Capacitor as any).getPlugin('LiveUpdates') ||
                         (Capacitor as any).Plugins?.LiveUpdates;
-        
+
         if (plugins) {
           console.log('✅ Plugin encontrado en Capacitor');
           const result = await plugins.sync();
           console.log('✅ Resultado:', result);
-          
+
           if (result?.updated) {
             this.utilsSvc.presentToast({
               message: 'Actualización descargada. Reinicia la app.',
@@ -143,13 +168,12 @@ async initNotifications() {
       } catch (e) {
         console.log('Método 1 falló:', e);
       }
-      
+
       // MÉTODO 2: Import dinámico con el nombre correcto
       try {
         const module = await import('@capacitor/live-updates');
-        // En v0.2.0, el export es 'LiveUpdate' (singular)
         const LiveUpdate = (module as any).LiveUpdate || module;
-        
+
         if (LiveUpdate && typeof LiveUpdate.sync === 'function') {
           console.log('✅ Plugin encontrado vía import dinámico');
           const result = await LiveUpdate.sync();
@@ -159,12 +183,11 @@ async initNotifications() {
       } catch (e) {
         console.log('Método 2 falló:', e);
       }
-      
+
       // MÉTODO 3: Buscar en window
       try {
-        // Buscar posibles nombres del plugin
         const posiblesNombres = ['LiveUpdates', 'LiveUpdate', 'CapacitorLiveUpdates'];
-        
+
         for (const nombre of posiblesNombres) {
           const plugin = (window as any)[nombre];
           if (plugin && typeof plugin?.sync === 'function') {
@@ -177,9 +200,9 @@ async initNotifications() {
       } catch (e) {
         console.log('Método 3 falló:', e);
       }
-      
+
       console.log('⚠️ No se pudo encontrar el plugin LiveUpdate');
-      
+
     } catch (error) {
       console.error('❌ Error general:', error);
     }
