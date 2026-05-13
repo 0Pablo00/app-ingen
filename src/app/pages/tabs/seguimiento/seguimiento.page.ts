@@ -1,7 +1,7 @@
 import { Component, AfterViewInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import { Observable, Subscription, of } from 'rxjs';
-import { map, switchMap, take } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 
 interface TecnicoUbicacion {
   id: string;
@@ -28,13 +28,8 @@ export class SeguimientoPage implements AfterViewInit, OnDestroy {
   map: any;
   markers: any[] = [];
 
-  // Lista de técnicos con última ubicación
   tecnicos$: Observable<TecnicoUbicacion[]>;
-
-  // Segmento activo
   segmento: 'lista' | 'mapa' = 'lista';
-
-  // Para el historial
   tecnicoSeleccionadoId: string | null = null;
   historial$: Observable<HistorialUbicacion[]> = of([]);
 
@@ -53,39 +48,51 @@ export class SeguimientoPage implements AfterViewInit, OnDestroy {
             timestamp: data.timestamp
           };
         })
-        .filter(t => t.lat && t.lng) // solo usuarios con ubicación
+        .filter(t => t.lat && t.lng)
       )
     );
   }
 
   ngAfterViewInit() {
-    // El mapa se carga solo cuando se seleccione el segmento mapa, pero podemos inicializarlo on demand
+    // No inicializamos el mapa aquí, sino cuando se necesite
+    // Pero sí nos suscribimos a los técnicos para tener los datos listos
+    this.subscription = this.tecnicos$.subscribe(tecnicos => {
+      this.actualizarMarcadores(tecnicos);
+    });
   }
 
   ngOnDestroy() {
     if (this.subscription) this.subscription.unsubscribe();
   }
 
-  // Cambiar a segmento mapa
-  mostrarMapa() {
-    this.segmento = 'mapa';
-    if (!this.map && this.mapContainer) {
-      this.cargarMapa();
-      this.subscription = this.tecnicos$.subscribe(tecnicos => {
-        this.actualizarMarcadores(tecnicos);
-      });
+  // Se llama al cambiar el segmento manualmente
+  onSegmentChanged(event: any) {
+    if (event.detail.value === 'mapa') {
+      this.asegurarMapa();
     }
   }
 
-  // Cargar mapa (se llama al mostrar segmento mapa)
-  cargarMapa() {
+  // Asegura que el mapa esté creado (si no, lo crea)
+  asegurarMapa() {
+    if (this.map) {
+      // Si ya existe, forzamos resize para que ocupe el espacio visible
+      google.maps.event.trigger(this.map, 'resize');
+      return;
+    }
     if (!this.mapContainer || !this.mapContainer.nativeElement) return;
+
     const centro = { lat: -34.6037, lng: -58.3816 };
     const opciones = {
       center: centro,
       zoom: 13,
     };
     this.map = new google.maps.Map(this.mapContainer.nativeElement, opciones);
+
+    // Una vez creado, actualizamos los marcadores (ya tenemos la suscripción)
+    // Pero forzamos una actualización inmediata con los últimos datos
+    this.tecnicos$.pipe(map(tecnicos => tecnicos)).subscribe(tecnicos => {
+      this.actualizarMarcadores(tecnicos);
+    }).unsubscribe(); // solo una vez
   }
 
   actualizarMarcadores(tecnicos: TecnicoUbicacion[]) {
@@ -116,7 +123,6 @@ export class SeguimientoPage implements AfterViewInit, OnDestroy {
     }
   }
 
-  // Cargar historial de un técnico
   cargarHistorial(tecnicoId: string) {
     this.tecnicoSeleccionadoId = tecnicoId;
     this.historial$ = this.afs.collection(`users/${tecnicoId}/locations`, ref =>
@@ -134,27 +140,20 @@ export class SeguimientoPage implements AfterViewInit, OnDestroy {
     );
   }
 
-  // Cerrar historial
   cerrarHistorial() {
     this.tecnicoSeleccionadoId = null;
     this.historial$ = of([]);
   }
 
-  // Centrar mapa en ubicación concreta
   centrarEnUbicacion(lat: number, lng: number) {
     this.segmento = 'mapa';
-    if (!this.map) {
-      this.mostrarMapa();
+    this.asegurarMapa(); // se asegura de que el mapa esté listo
+    if (this.map) {
+      this.map.setCenter({ lat, lng });
+      this.map.setZoom(16);
     }
-    setTimeout(() => {
-      if (this.map) {
-        this.map.setCenter({ lat, lng });
-        this.map.setZoom(16);
-      }
-    }, 300);
   }
 
-  // Formateo de timestamp (opcional)
   formatearFecha(timestamp: any): string {
     if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
