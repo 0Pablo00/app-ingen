@@ -1,9 +1,59 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Ubicación </ion-title>
+    <ion-title>Seguimiento</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
-  <div #mapContainer style="width: 100%; height: 100%;"></div>
+  <!-- Segmento para alternar entre lista y mapa -->
+  <ion-segment [(ngModel)]="segmento" (ionChange)="segmento === 'mapa' && mostrarMapa()">
+    <ion-segment-button value="lista">
+      <ion-label>Técnicos</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="mapa">
+      <ion-label>Mapa</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Vista de lista de técnicos -->
+  <div *ngIf="segmento === 'lista'">
+    <ion-list>
+      <ion-item *ngFor="let tecnico of tecnicos$ | async" (click)="cargarHistorial(tecnico.id)">
+        <ion-label>
+          <h2>{{ tecnico.name || 'Sin nombre' }}</h2>
+          <p>Última ubicación: {{ tecnico.lat }}, {{ tecnico.lng }}</p>
+          <p>Hora: {{ formatearFecha(tecnico.timestamp) }}</p>
+        </ion-label>
+        <ion-button fill="clear" slot="end" (click)="centrarEnUbicacion(tecnico.lat, tecnico.lng); $event.stopPropagation()">
+          <ion-icon name="map-outline"></ion-icon>
+        </ion-button>
+      </ion-item>
+    </ion-list>
+
+    <!-- Historial expandible del técnico seleccionado -->
+    <ion-card *ngIf="tecnicoSeleccionadoId">
+      <ion-card-header>
+        <ion-card-title>Últimas 5 ubicaciones</ion-card-title>
+        <ion-button fill="clear" (click)="cerrarHistorial()">Cerrar</ion-button>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let h of historial$ | async">
+            <ion-label>
+              <p>{{ h.lat }}, {{ h.lng }}</p>
+              <p>{{ formatearFecha(h.timestamp) }}</p>
+            </ion-label>
+            <ion-button fill="clear" (click)="centrarEnUbicacion(h.lat, h.lng)">
+              <ion-icon name="locate-outline"></ion-icon>
+            </ion-button>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Vista de mapa (se muestra solo cuando segmento es 'mapa') -->
+  <div *ngIf="segmento === 'mapa'">
+    <div #mapContainer style="width: 100%; height: 70vh;"></div>
+  </div>
 </ion-content>

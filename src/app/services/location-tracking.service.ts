@@ -4,27 +4,27 @@ import type { BackgroundGeolocationPlugin, Location, WatcherOptions, CallbackErr
 import { AngularFirestore } from '@angular/fire/compat/firestore';
 import firebase from 'firebase/compat/app';
 
-// Registrar el plugin
 const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation');
 
 @Injectable({ providedIn: 'root' })
 export class LocationTrackingService {
 
   private watcherId: string | null = null;
+  private intervalId: any = null;          // Para el intervalo de prueba
 
   constructor(private afs: AngularFirestore) {}
 
   async iniciarSeguimiento(idTecnico: string) {
-    // Opciones del watcher (obligatorias para segundo plano en Android)
+    // Configuración del watcher (segundo plano)
     const watcherOptions: WatcherOptions = {
-      backgroundMessage: 'App rastreando tu ubicación',   // Texto de la notificación persistente
-      backgroundTitle: 'Seguimiento activo',               // Título de la notificación
-      requestPermissions: true,                            // Pedir permisos si faltan
-      stale: false,                                        // Solo ubicaciones actualizadas
-      distanceFilter: 5,                                   // Actualizar cada 5 metros
+      backgroundMessage: 'App rastreando tu ubicación',
+      backgroundTitle: 'Seguimiento activo',
+      requestPermissions: true,
+      stale: false,
+      distanceFilter: 1,          // 🔥 Muy sensible (1 metro) para pruebas
     };
 
-    // Iniciar el watcher y guardar su ID
+    // Iniciar el watcher normal
     this.watcherId = await BackgroundGeolocation.addWatcher(
       watcherOptions,
       (location: Location | null, error: CallbackError | null) => {
@@ -33,21 +33,45 @@ export class LocationTrackingService {
           return;
         }
         if (location) {
-          console.log('📍 Nueva ubicación:', location);
+          console.log('📍 Watcher - Ubicación:', location);
           this.guardarUbicacion(idTecnico, location);
         }
       }
     );
     console.log('▶️ Watcher iniciado (ID):', this.watcherId, 'para técnico:', idTecnico);
+
+    // 🔥 Intervalo de prueba: cada 10 segundos pide una ubicación (solo primer plano)
+    this.intervalId = setInterval(async () => {
+      try {
+        // Casteo a any para evitar error de tipo
+        const pos = await (BackgroundGeolocation as any).getCurrentPosition({
+          timeout: 5000,
+          maximumAge: 0,
+          desiredAccuracy: 10,
+        });
+        if (pos) {
+          console.log('⏱️ Intervalo - Ubicación:', pos);
+          this.guardarUbicacion(idTecnico, pos);
+        }
+      } catch (e) {
+        console.warn('Error en getCurrentPosition (puede ser normal si el GPS no está listo):', e);
+      }
+    }, 10000);   // cada 10 segundos
+    console.log('⏱️ Intervalo de prueba (10s) iniciado para primer plano');
   }
 
   async detenerSeguimiento() {
+    // Detener watcher
     if (this.watcherId) {
       await BackgroundGeolocation.removeWatcher({ id: this.watcherId });
       console.log('⏹️ Watcher detenido:', this.watcherId);
       this.watcherId = null;
-    } else {
-      console.log('No hay watcher activo para detener.');
+    }
+    // Detener intervalo
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+      console.log('⏹️ Intervalo de prueba detenido');
     }
   }
 
@@ -60,8 +84,14 @@ export class LocationTrackingService {
       precision: location.accuracy,
     };
 
+    // 1. Actualizar documento del usuario (última ubicación)
     this.afs.collection('users').doc(idTecnico).set(datos, { merge: true })
-      .then(() => console.log('💾 Ubicación guardada en users/' + idTecnico))
-      .catch(err => console.error('Error al guardar:', err));
+      .then(() => console.log('💾 Última ubicación guardada en users/' + idTecnico))
+      .catch(err => console.error('Error al guardar última ubicación:', err));
+
+    // 2. Añadir entrada al historial (subcolección 'locations')
+    this.afs.collection(`users/${idTecnico}/locations`).add(datos)
+      .then(() => console.log('📋 Historial añadido para', idTecnico))
+      .catch(err => console.error('Error al guardar historial:', err));
   }
 }
