@@ -7,7 +7,7 @@ import { UtilsService } from 'src/app/services/utils.service';
 import { ModalController, IonInfiniteScroll } from '@ionic/angular';
 import { AddUpdateTaskComponent } from 'src/app/shared/components/add-update-task/add-update-task.component';
 import { ImageModalComponent } from 'src/app/components/image-modal/image-modal.component';
-import { AuthService } from 'src/app/services/auth.service';
+import { AuthService } from 'src/app/services/auth.service';  // 🔥 IMPORTANTE
 
 @Component({
   selector: 'app-finalizadas',
@@ -38,12 +38,14 @@ export class FinalizadasPage implements OnInit {
   private searchMode: boolean = false;
   private allTasksLoadedForSearch: boolean = false;
 
+  private ownerUid: string = ''; // UID del dueño de las tareas
+
   constructor(
     private firebaseSvc: FirebaseService,
     private utilsSvc: UtilsService,
     private modalCtrl: ModalController,
     private router: Router,
-    private authSvc: AuthService
+    private authSvc: AuthService  // 🔥 Inyectado
   ) {
     window.addEventListener('online', () => this.isOnline = true);
     window.addEventListener('offline', () => this.isOnline = false);
@@ -54,12 +56,13 @@ export class FinalizadasPage implements OnInit {
   ionViewWillEnter() {
     console.log('Finalizadas: ionViewWillEnter');
     this.getUser();
+    this.ownerUid = this.authSvc.getTasksOwnerUid(); // Dueño principal
     this.resetPagination();
     this.loadInitialTasks();
   }
 
   getUser() {
-    this.user = this.utilsSvc.getElementFromLocalStorage('user');
+    this.user = this.authSvc.getCurrentUser();
     if (!this.user?.uid) {
       console.error('No hay usuario en localStorage');
       this.router.navigate(['/auth']);
@@ -83,7 +86,6 @@ export class FinalizadasPage implements OnInit {
     if (this.infiniteScroll) {
       this.infiniteScroll.disabled = false;
     }
-    console.log('🔄 Paginación reseteada (finalizadas)');
   }
 
   async loadInitialTasks() {
@@ -93,12 +95,11 @@ export class FinalizadasPage implements OnInit {
   }
 
   async loadMoreTasks(event?: any) {
-    // Si estamos en modo búsqueda, no cargar más con paginación
     if (this.searchMode) {
       if (event) event.target.complete();
       return;
     }
-    if (!this.hasMoreData || this.loadingMore || !this.user?.uid) {
+    if (!this.hasMoreData || this.loadingMore || !this.ownerUid) {
       if (event) event.target.complete();
       return;
     }
@@ -107,14 +108,23 @@ export class FinalizadasPage implements OnInit {
 
     try {
       console.log('Cargando más tareas finalizadas...');
+      
+      // 👇 Filtros base
+      const filters: any = {
+        finalizada: true,
+        orderByNumber: true,
+        limitTo: this.pageSize,
+        startAfter: this.lastVisible
+      };
+
+      // Si NO es admin, solo ve sus propias tareas
+      if (this.user.role !== 'admin') {
+        filters.createdBy = this.user.uid;
+      }
+
       const result = await this.firebaseSvc.getFilteredTasksPaginated(
-        this.user.uid,
-        { 
-          finalizada: true,
-          orderByNumber: true,
-          limitTo: this.pageSize,
-          startAfter: this.lastVisible
-        }
+        this.ownerUid,  // 🔥 Dueño principal, no this.user.uid
+        filters
       );
       
       if (result.tasks.length > 0) {
@@ -170,7 +180,6 @@ export class FinalizadasPage implements OnInit {
 
   private async performSearch(term: string) {
     if (!term) return;
-    // Cargar todas las tareas finalizadas solo la primera vez que se busca
     if (!this.allTasksLoadedForSearch) {
       await this.loadAllTasksForSearch();
     }
@@ -180,20 +189,25 @@ export class FinalizadasPage implements OnInit {
   private async loadAllTasksForSearch() {
     const loading = await this.utilsSvc.presentLoading({ message: 'Cargando todas las tareas finalizadas para búsqueda...' });
     try {
-      const ownerUid = this.user.uid;
       let allTasks: Task[] = [];
       let last = null;
       let hasMore = true;
       const pageLimit = 50;
+      
       while (hasMore) {
+        const filters: any = {
+          finalizada: true,
+          orderByNumber: true,
+          limitTo: pageLimit,
+          startAfter: last
+        };
+        if (this.user.role !== 'admin') {
+          filters.createdBy = this.user.uid;
+        }
+        
         const result = await this.firebaseSvc.getFilteredTasksPaginated(
-          ownerUid,
-          {
-            finalizada: true,
-            orderByNumber: true,
-            limitTo: pageLimit,
-            startAfter: last
-          }
+          this.ownerUid,  // Dueño principal
+          filters
         );
         allTasks = [...allTasks, ...result.tasks];
         last = result.lastVisible;
@@ -242,7 +256,6 @@ export class FinalizadasPage implements OnInit {
     this.searchTerm = '';
     this.isSearching = false;
     if (this.searchMode) {
-      // Salir del modo búsqueda y recargar paginación normal
       this.searchMode = false;
       this.allTasksLoadedForSearch = false;
       this.resetPagination();
@@ -250,19 +263,6 @@ export class FinalizadasPage implements OnInit {
     } else {
       this.applyFilter();
     }
-  }
-
-  taskMatchesSearch(task: Task): boolean {
-    if (!this.searchTerm) return false;
-    const term = this.searchTerm.toLowerCase();
-    return (
-      task.orderNumber?.toString().includes(term) ||
-      task.title?.toLowerCase().includes(term) ||
-      task.tecnicoNombre?.toLowerCase().includes(term) ||
-      task.description?.toLowerCase().includes(term) ||
-      task.sucursal?.toLowerCase().includes(term) ||
-      task.materiales?.some(m => m.nombre?.toLowerCase().includes(term) || m.observacion?.toLowerCase().includes(term))
-    );
   }
 
   // ==================== CRUD Y OTRAS FUNCIONES ====================
@@ -278,7 +278,6 @@ export class FinalizadasPage implements OnInit {
       await modal.present();
       const { data } = await modal.onWillDismiss();
       if (data?.success) {
-        // Si estamos en modo búsqueda, recargar todas las tareas para actualizar la lista
         if (this.searchMode) {
           this.allTasksLoadedForSearch = false;
           await this.loadAllTasksForSearch();
@@ -382,4 +381,16 @@ export class FinalizadasPage implements OnInit {
       ]
     });
   }
+  taskMatchesSearch(task: Task): boolean {
+  if (!this.searchTerm) return false;
+  const term = this.searchTerm.toLowerCase();
+  return (
+    task.orderNumber?.toString().includes(term) ||
+    task.title?.toLowerCase().includes(term) ||
+    task.tecnicoNombre?.toLowerCase().includes(term) ||
+    task.description?.toLowerCase().includes(term) ||
+    task.sucursal?.toLowerCase().includes(term) ||
+    task.materiales?.some(m => m.nombre?.toLowerCase().includes(term) || m.observacion?.toLowerCase().includes(term))
+  );
+}
 }

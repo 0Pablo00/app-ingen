@@ -16,12 +16,11 @@ import jsPDF from 'jspdf';
 })
 export class ReportesPage implements OnInit {
 
-  
   user: User = {} as User;
   loading = false;
   errorMensaje = '';
   loadingMessage = '';
-  mesParaLista: string = ''; // Se inicializará con el mes actual
+  mesParaLista: string = '';
 
   meses: { label: string; value: string }[] = [];
   mesSeleccionado = '';
@@ -34,15 +33,10 @@ export class ReportesPage implements OnInit {
   mostrarOperarios = false;
   tareasDelMes: Task[] = [];
 
-  // Nueva funcionalidad para lista de verificación
   provinciaSeleccionada: string = 'Mendoza';
   listaSucursalesProvincia: string[] = [];
   fechaActual: string = new Date().toLocaleDateString();
 
-
-  
-
-  // Lista completa de sucursales por provincia
   sucursalesMendoza: string[] = [
     'ALGARROBAL', 'AMIGORENA', 'AVELLANEDA', 'BARRIALES', 'BELTRAN',
     'BUENA NUEVA', 'CANO', 'CAPILLA DEL ROSARIO', 'CARRODILLA', 'CASTELLI',
@@ -81,14 +75,12 @@ export class ReportesPage implements OnInit {
     this.seleccionarMesActual();
     this.cargarSucursalesPorProvincia();
 
-
-      const ahora = new Date();
-  const mesActual = ahora.toLocaleString('es', { month: 'long' });
-  const año = ahora.getFullYear();
-  this.mesParaLista = `${mesActual.charAt(0).toUpperCase() + mesActual.slice(1)} ${año}`;
-  this.cargarSucursalesPorProvincia();
-}
-  
+    const ahora = new Date();
+    const mesActual = ahora.toLocaleString('es', { month: 'long' });
+    const año = ahora.getFullYear();
+    this.mesParaLista = `${mesActual.charAt(0).toUpperCase() + mesActual.slice(1)} ${año}`;
+    this.cargarSucursalesPorProvincia();
+  }
 
   generarMeses() {
     const hoy = new Date();
@@ -142,7 +134,14 @@ export class ReportesPage implements OnInit {
       this.loadingMessage = 'Obteniendo tareas del mes...';
       console.log(`[Reportes] 1. Consultando tareas finalizadas de ${año}-${mes}`);
       console.time('[Reportes] consulta_firestore');
-      this.tareasDelMes = await this.firebaseSvc.getFinalizedTasksByMonth(this.user.uid, año, mes);
+
+      // 🔥 Obtener tareas del dueño principal y filtrar si no es admin
+      const ownerUid = this.authSvc.getTasksOwnerUid();
+      let tareas = await this.firebaseSvc.getFinalizedTasksByMonth(ownerUid, año, mes);
+      if (this.user.role !== 'admin') {
+        tareas = tareas.filter(task => task.createdBy === this.user.uid);
+      }
+      this.tareasDelMes = tareas;
       console.timeEnd('[Reportes] consulta_firestore');
       console.log(`[Reportes] Tareas obtenidas: ${this.tareasDelMes.length}`);
 
@@ -255,238 +254,230 @@ export class ReportesPage implements OnInit {
     return encontrado ? encontrado.label : '';
   }
 
-  // ========== NUEVO: GENERAR PDF DE LISTA DE VERIFICACIÓN ==========
-async imprimirListaVerificacion() {
-  const mes = this.mesParaLista || this.getNombreMes();
-  const provincia = this.provinciaSeleccionada;
-  const fechaImpresion = new Date().toLocaleDateString();
+  // ========== GENERAR PDF DE LISTA DE VERIFICACIÓN ==========
+  async imprimirListaVerificacion() {
+    const mes = this.mesParaLista || this.getNombreMes();
+    const provincia = this.provinciaSeleccionada;
+    const fechaImpresion = new Date().toLocaleDateString();
 
-  // Distribución uniforme por página (sin contar el título)
-  const sucursalesPorPagina = 23; // cantidad que cabe bien
-  const total = this.listaSucursalesProvincia.length;
-  const pageSizes: number[] = [];
-  let remaining = total;
-  while (remaining > 0) {
-    pageSizes.push(Math.min(sucursalesPorPagina, remaining));
-    remaining -= sucursalesPorPagina;
-  }
-
-  this.utilsSvc.presentLoading({ message: `Generando PDF (${pageSizes.length} páginas)...` });
-
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = 190;
-  const startX = 10;
-  const startY = 15;
-  const bottomMargin = 15;
-
-  let offset = 0;
-  for (let p = 0; p < pageSizes.length; p++) {
-    const size = pageSizes[p];
-    const sucursalesPagina = this.listaSucursalesProvincia.slice(offset, offset + size);
-    offset += size;
-
-    const isFirstPage = (p === 0);
-
-    let htmlContent = `
-      <div style="font-family: Arial, sans-serif; width: 800px; margin: 0 auto; padding: 10px; padding-bottom: 30px;">
-    `;
-
-    if (isFirstPage) {
-      // Título completo en la primera página
-      htmlContent += `
-        <h2 style="text-align: center; color: #2c3e66;">Lista de Verificación de Sucursales</h2>
-        <p><strong>Mes:</strong> ${mes}</p>
-        <p><strong>Provincia:</strong> ${provincia}</p>
-       
-      `;
-    } else {
-      // Cabecera compacta en las siguientes páginas
-      htmlContent += `
-        <p style="margin: 0 0 10px 0;"><strong>Mes:</strong> ${mes} | <strong>Provincia:</strong> ${provincia} | <strong>Fecha:</strong> ${fechaImpresion}</p>
-      `;
+    const sucursalesPorPagina = 23;
+    const total = this.listaSucursalesProvincia.length;
+    const pageSizes: number[] = [];
+    let remaining = total;
+    while (remaining > 0) {
+      pageSizes.push(Math.min(sucursalesPorPagina, remaining));
+      remaining -= sucursalesPorPagina;
     }
 
-    htmlContent += `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
-          <thead>
-            <tr style="background-color: #f2f2f2;">
-              <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Sucursal</th>
-              <th style="border: 1px solid #ddd; padding: 6px; text-align: center;">Visitado (✓)</th>
-              <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Fecha de visita</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
+    this.utilsSvc.presentLoading({ message: `Generando PDF (${pageSizes.length} páginas)...` });
 
-    for (const suc of sucursalesPagina) {
-      htmlContent += `
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 6px;">${suc}</td>
-              <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">☐</td>
-              <td style="border: 1px solid #ddd; padding: 6px;">___________</td>
-            </tr>
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = 190;
+    const startX = 10;
+    const startY = 15;
+    const bottomMargin = 15;
+
+    let offset = 0;
+    for (let p = 0; p < pageSizes.length; p++) {
+      const size = pageSizes[p];
+      const sucursalesPagina = this.listaSucursalesProvincia.slice(offset, offset + size);
+      offset += size;
+
+      const isFirstPage = (p === 0);
+
+      let htmlContent = `
+        <div style="font-family: Arial, sans-serif; width: 800px; margin: 0 auto; padding: 10px; padding-bottom: 30px;">
       `;
-    }
 
-    htmlContent += `
-          </tbody>
-        </table>
-        <p style="margin-top: 20px; font-size: 11px; color: #666;">* Marcar con una X o ✓ según corresponda.</p>
-      </div>
-    `;
+      if (isFirstPage) {
+        htmlContent += `
+          <h2 style="text-align: center; color: #2c3e66;">Lista de Verificación de Sucursales</h2>
+          <p><strong>Mes:</strong> ${mes}</p>
+          <p><strong>Provincia:</strong> ${provincia}</p>
+        `;
+      } else {
+        htmlContent += `
+          <p style="margin: 0 0 10px 0;"><strong>Mes:</strong> ${mes} | <strong>Provincia:</strong> ${provincia} | <strong>Fecha:</strong> ${fechaImpresion}</p>
+        `;
+      }
 
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.top = '0';
-    tempDiv.style.width = '800px';
-    tempDiv.innerHTML = htmlContent;
-    document.body.appendChild(tempDiv);
-
-    await this.delay(150);
-    const canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff' });
-    document.body.removeChild(tempDiv);
-
-    const imgData = canvas.toDataURL('image/jpeg', 1.0);
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    if (p === 0) {
-      pdf.addImage(imgData, 'JPEG', startX, startY, imgWidth, imgHeight);
-    } else {
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', startX, startY, imgWidth, imgHeight);
-    }
-
-    // Número de página
-    pdf.setFontSize(10);
-    pdf.text(`Hoja ${p+1}`, pdf.internal.pageSize.getWidth() - 20, pdf.internal.pageSize.getHeight() - bottomMargin);
-  }
-
-  pdf.save(`Lista_Verificacion_${provincia}_${mes.replace(/\s/g, '_')}.pdf`);
-  await this.utilsSvc.dismissLoading();
-  this.utilsSvc.presentToast({ message: 'PDF generado correctamente', color: 'success' });
-}
-// Agregar este método auxiliar si no existe
-private delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-
-async imprimirPlanillaReclamos() {
-  const mes = this.mesParaLista || this.getNombreMes();
-  const provincia = this.provinciaSeleccionada;
-  const fechaImpresion = new Date().toLocaleDateString();
-
-  // Ajustamos la cantidad por página porque ahora las filas son más altas (aprox 12 por hoja)
-  const sucursalesPorPagina = 12; 
-  const total = this.listaSucursalesProvincia.length;
-  const pageSizes: number[] = [];
-  let remaining = total;
-  while (remaining > 0) {
-    pageSizes.push(Math.min(sucursalesPorPagina, remaining));
-    remaining -= sucursalesPorPagina;
-  }
-
-  this.utilsSvc.presentLoading({ message: `Generando PDF de Reclamos (${pageSizes.length} páginas)...` });
-
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const pageWidth = 190;
-  const startX = 10;
-  const startY = 15;
-  const bottomMargin = 15;
-
-  let offset = 0;
-  for (let p = 0; p < pageSizes.length; p++) {
-    const size = pageSizes[p];
-    const sucursalesPagina = this.listaSucursalesProvincia.slice(offset, offset + size);
-    offset += size;
-
-    const isFirstPage = (p === 0);
-
-    let htmlContent = `
-      <div style="font-family: Arial, sans-serif; width: 800px; margin: 0 auto; padding: 10px; padding-bottom: 30px; background-color: white;">
-    `;
-
-    if (isFirstPage) {
       htmlContent += `
-        <h2 style="text-align: center; color: #2c3e66; margin-bottom: 20px;">Planilla de Reclamos - Sucursales</h2>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
-          <span><strong>Mes:</strong> ${mes}</span>
-          <span><strong>Provincia:</strong> ${provincia}</span>
-       
+          <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+            <thead>
+              <tr style="background-color: #f2f2f2;">
+                <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Sucursal</th>
+                <th style="border: 1px solid #ddd; padding: 6px; text-align: center;">Visitado (✓)</th>
+                <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">Fecha de visita</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      for (const suc of sucursalesPagina) {
+        htmlContent += `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 6px;">${suc}</td>
+                <td style="border: 1px solid #ddd; padding: 6px; text-align: center;">☐</td>
+                <td style="border: 1px solid #ddd; padding: 6px;">___________</td>
+              </tr>
+        `;
+      }
+
+      htmlContent += `
+            </tbody>
+          </table>
+          <p style="margin-top: 20px; font-size: 11px; color: #666;">* Marcar con una X o ✓ según corresponda.</p>
         </div>
       `;
-    } else {
-      htmlContent += `
-        <p style="margin: 0 0 15px 0; font-size: 12px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
-          <strong>Mes:</strong> ${mes} | <strong>Provincia:</strong> ${provincia} | <strong>Fecha:</strong> ${fechaImpresion}
-        </p>
-      `;
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0';
+      tempDiv.style.width = '800px';
+      tempDiv.innerHTML = htmlContent;
+      document.body.appendChild(tempDiv);
+
+      await this.delay(150);
+      const canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff' });
+      document.body.removeChild(tempDiv);
+
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      if (p === 0) {
+        pdf.addImage(imgData, 'JPEG', startX, startY, imgWidth, imgHeight);
+      } else {
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', startX, startY, imgWidth, imgHeight);
+      }
+
+      pdf.setFontSize(10);
+      pdf.text(`Hoja ${p+1}`, pdf.internal.pageSize.getWidth() - 20, pdf.internal.pageSize.getHeight() - bottomMargin);
     }
 
-    htmlContent += `
-        <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-          <thead>
-            <tr style="background-color: #f2f2f2;">
-              <th style="border: 1px solid #ccc; padding: 10px; text-align: left; width: 25%;">Sucursal</th>
-              <th style="border: 1px solid #ccc; padding: 10px; text-align: left; width: 60%;">Reclamos realizados</th>
-              <th style="border: 1px solid #ccc; padding: 10px; text-align: left; width: 15%;">Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-
-    for (const suc of sucursalesPagina) {
-      htmlContent += `
-            <tr>
-              <td style="border: 1px solid #ccc; padding: 15px 10px; font-weight: bold; font-size: 13px;">${suc}</td>
-              <td style="border: 1px solid #ccc; padding: 15px 10px; vertical-align: bottom;">
-                <div style=" width: 100%; height: 25px;"></div>
-              </td>
-              <td style="border: 1px solid #ccc; padding: 15px 10px; vertical-align: bottom;">
-                <div style=" width: 100%; height: 25px;"></div>
-              </td>
-            </tr>
-      `;
-    }
-
-    htmlContent += `
-          </tbody>
-        </table>
-        <p style="margin-top: 25px; font-size: 11px; color: #666; font-style: italic;">
-          * Espacio diseñado para anotaciones manuales de reclamos técnicos y fechas de intervención.
-        </p>
-      </div>
-    `;
-
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.left = '-9999px';
-    tempDiv.style.top = '0';
-    tempDiv.style.width = '800px';
-    tempDiv.innerHTML = htmlContent;
-    document.body.appendChild(tempDiv);
-
-    await this.delay(200); // Un poquito más de tiempo para asegurar el renderizado
-    const canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff' });
-    document.body.removeChild(tempDiv);
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    if (p > 0) pdf.addPage();
-    
-    pdf.addImage(imgData, 'JPEG', startX, startY, imgWidth, imgHeight);
-
-    pdf.setFontSize(10);
-    pdf.setTextColor(100);
-    pdf.text(`Página ${p + 1} de ${pageSizes.length}`, pdf.internal.pageSize.getWidth() - 30, pdf.internal.pageSize.getHeight() - bottomMargin);
+    pdf.save(`Lista_Verificacion_${provincia}_${mes.replace(/\s/g, '_')}.pdf`);
+    await this.utilsSvc.dismissLoading();
+    this.utilsSvc.presentToast({ message: 'PDF generado correctamente', color: 'success' });
   }
 
-  pdf.save(`Planilla_Reclamos_${provincia}_${mes.replace(/\s/g, '_')}.pdf`);
-  await this.utilsSvc.dismissLoading();
-  this.utilsSvc.presentToast({ message: 'Planilla de reclamos generada con éxito', color: 'success' });
-}
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async imprimirPlanillaReclamos() {
+    const mes = this.mesParaLista || this.getNombreMes();
+    const provincia = this.provinciaSeleccionada;
+    const fechaImpresion = new Date().toLocaleDateString();
+
+    const sucursalesPorPagina = 12;
+    const total = this.listaSucursalesProvincia.length;
+    const pageSizes: number[] = [];
+    let remaining = total;
+    while (remaining > 0) {
+      pageSizes.push(Math.min(sucursalesPorPagina, remaining));
+      remaining -= sucursalesPorPagina;
+    }
+
+    this.utilsSvc.presentLoading({ message: `Generando PDF de Reclamos (${pageSizes.length} páginas)...` });
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = 190;
+    const startX = 10;
+    const startY = 15;
+    const bottomMargin = 15;
+
+    let offset = 0;
+    for (let p = 0; p < pageSizes.length; p++) {
+      const size = pageSizes[p];
+      const sucursalesPagina = this.listaSucursalesProvincia.slice(offset, offset + size);
+      offset += size;
+
+      const isFirstPage = (p === 0);
+
+      let htmlContent = `
+        <div style="font-family: Arial, sans-serif; width: 800px; margin: 0 auto; padding: 10px; padding-bottom: 30px; background-color: white;">
+      `;
+
+      if (isFirstPage) {
+        htmlContent += `
+          <h2 style="text-align: center; color: #2c3e66; margin-bottom: 20px;">Planilla de Reclamos - Sucursales</h2>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
+            <span><strong>Mes:</strong> ${mes}</span>
+            <span><strong>Provincia:</strong> ${provincia}</span>
+          </div>
+        `;
+      } else {
+        htmlContent += `
+          <p style="margin: 0 0 15px 0; font-size: 12px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+            <strong>Mes:</strong> ${mes} | <strong>Provincia:</strong> ${provincia} | <strong>Fecha:</strong> ${fechaImpresion}
+          </p>
+        `;
+      }
+
+      htmlContent += `
+          <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+            <thead>
+              <tr style="background-color: #f2f2f2;">
+                <th style="border: 1px solid #ccc; padding: 10px; text-align: left; width: 25%;">Sucursal</th>
+                <th style="border: 1px solid #ccc; padding: 10px; text-align: left; width: 60%;">Reclamos realizados</th>
+                <th style="border: 1px solid #ccc; padding: 10px; text-align: left; width: 15%;">Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      for (const suc of sucursalesPagina) {
+        htmlContent += `
+              <tr>
+                <td style="border: 1px solid #ccc; padding: 15px 10px; font-weight: bold; font-size: 13px;">${suc}</td>
+                <td style="border: 1px solid #ccc; padding: 15px 10px; vertical-align: bottom;">
+                  <div style=" width: 100%; height: 25px;"></div>
+                </td>
+                <td style="border: 1px solid #ccc; padding: 15px 10px; vertical-align: bottom;">
+                  <div style=" width: 100%; height: 25px;"></div>
+                </td>
+              </tr>
+        `;
+      }
+
+      htmlContent += `
+            </tbody>
+          </table>
+          <p style="margin-top: 25px; font-size: 11px; color: #666; font-style: italic;">
+            * Espacio diseñado para anotaciones manuales de reclamos técnicos y fechas de intervención.
+          </p>
+        </div>
+      `;
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.top = '0';
+      tempDiv.style.width = '800px';
+      tempDiv.innerHTML = htmlContent;
+      document.body.appendChild(tempDiv);
+
+      await this.delay(200);
+      const canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff' });
+      document.body.removeChild(tempDiv);
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      if (p > 0) pdf.addPage();
+      
+      pdf.addImage(imgData, 'JPEG', startX, startY, imgWidth, imgHeight);
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(100);
+      pdf.text(`Página ${p + 1} de ${pageSizes.length}`, pdf.internal.pageSize.getWidth() - 30, pdf.internal.pageSize.getHeight() - bottomMargin);
+    }
+
+    pdf.save(`Planilla_Reclamos_${provincia}_${mes.replace(/\s/g, '_')}.pdf`);
+    await this.utilsSvc.dismissLoading();
+    this.utilsSvc.presentToast({ message: 'Planilla de reclamos generada con éxito', color: 'success' });
+  }
 }
