@@ -1,0 +1,71 @@
+// Color azul profesional más suave
+$azul-elegante: #385581; 
+$fondo-gris: #f4f7f9;
+
+ion-toolbar {
+    --background: #{$azul-elegante};
+    --color: white;
+}
+
+.modal-content {
+    --background: #{$fondo-gris};
+}
+
+.form-container {
+    padding: 20px;
+}
+
+// Estilo para los "campos" de entrada
+.custom-input {
+    --background: white;
+    --border-radius: 12px;
+    --padding-start: 15px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); // Sombra suave
+    
+    ion-label {
+        color: $azul-elegante !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    ion-select, ion-textarea {
+        --placeholder-color: #999;
+        --color: #333;
+    }
+}
+
+.custom-textarea {
+    margin-top: 10px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+}
+
+// Grupo de botones al final
+.button-group {
+    margin-top: 30px;
+}
+
+.main-button {
+    --border-radius: 12px;
+    --background: #{$azul-elegante};
+    --box-shadow: 0 4px 12px rgba(56, 85, 129, 0.3);
+    height: 52px;
+    font-weight: 600;
+    text-transform: none;
+    font-size: 16px;
+}
+
+.secondary-button {
+    --border-radius: 12px;
+    margin-top: 15px;
+    height: 50px;
+    text-transform: none;
+    font-weight: 600;
+}
+
+// Ajuste para el botón de cancelar en el header
+ion-button[slot="end"] {
+    --color: white;
+}

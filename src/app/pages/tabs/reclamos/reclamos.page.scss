@@ -1,0 +1,170 @@
+// reclamos.page.scss
+
+.content {
+    background-color: #f4f5f8;
+    border-radius: 20px 20px 0 0;
+    margin-top: 10px;
+    min-height: 100%;
+    padding: 10px;
+    padding-bottom: 80px;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.btn-dark {
+    --color: #00a331;
+    font-size: 13px;
+}
+
+// Estilo para los nombres de sucursales en el acordeón
+.sucursal-header-label {
+    color: #28a745 !important;
+    font-weight: bold !important;
+    font-size: 14px !important;
+    text-transform: uppercase;
+    
+    .count {
+        color: #666;
+        font-weight: normal;
+    }
+}
+
+// Para que el texto no se vea comprimido y use todo el ancho
+.reclamo-item {
+    --background: white;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+
+    .reclamo-titulo {
+        font-size: 15px;
+        line-height: 1.2;
+        margin-bottom: 4px;
+        white-space: normal;
+    }
+
+    .reclamo-info {
+        font-size: 12px;
+    }
+}
+
+// Ajuste para la vista interna de los acordeones
+.inner-item {
+    --padding-start: 8px;
+    --padding-end: 8px;
+    
+    .text-small {
+        font-size: 13.5px !important;
+    }
+    
+    .end-container {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    .date-note {
+        font-size: 10px;
+        margin-bottom: 2px;
+    }
+}
+
+.ion-text-wrap {
+    width: 100%;
+    display: block;
+}
+
+.bottom-spacer {
+    height: 100px;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .reclamo-item {
+        --padding-end: 0;
+    }
+    
+    .item-buttons {
+        margin-left: 0;
+    }
+}
+
+ion-content::part(scroll) {
+    background: #5492fd !important;
+    border-top: none !important;
+}
+
+.sucursal-nombre {
+    color: #37925a;
+    font-weight: 600;
+}
+
+// Estilos para la vista por zona
+.zona-header-label {
+    color: #464646;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.inner-accordion {
+    margin: 4px 0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+// Estilo para el texto "Creado por"
+.created-by {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+}
+
+.user-note {
+    font-size: 10px;
+    color: #888;
+    display: block;
+}
+
+// ============================
+// 🔥 CAMBIOS CLAVE PARA QUE LOS COLORES FUNCIONEN EN ENCABEZADOS
+// ============================
+
+// Sobrescribimos completamente el color "light" en los ion-item que tengan las clases de alerta
+ion-item.reclamo-amarillo,
+ion-item.reclamo-rojo {
+    // Anulamos cualquier variable que venga de color="light"
+    --ion-item-background: transparent !important;
+    --ion-item-base-background: transparent !important;
+    --background: transparent !important;
+    
+    // Aplicamos los colores translúcidos
+    &.reclamo-amarillo {
+        --background: rgba(255, 235, 59, 0.35) !important;
+        background: rgba(255, 235, 59, 0.35) !important;
+    }
+    
+    &.reclamo-rojo {
+        --background: rgba(244, 67, 54, 0.3) !important;
+        background: rgba(244, 67, 54, 0.3) !important;
+    }
+    
+    // Aseguramos legibilidad del texto (oscuro sobre fondo claro translúcido)
+    --color: #333 !important;
+    color: #333 !important;
+}
+
+// Las clases originales para los ítems individuales (sin conflicto con las anteriores)
+.reclamo-amarillo {
+    --background: rgba(255, 235, 59, 0.35) !important;
+    background: rgba(255, 235, 59, 0.35) !important;
+}
+
+.reclamo-rojo {
+    --background: rgba(244, 67, 54, 0.3) !important;
+    background: rgba(244, 67, 54, 0.3) !important;
+}

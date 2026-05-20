@@ -1,0 +1,140 @@
+<app-header color="primary" title="Reclamos">
+</app-header>
+
+<ion-content color="primary" [fullscreen]="true">
+  <div class="content">
+    <div class="action-buttons">
+      <ion-button (click)="openCreateModal()" fill="clear" class="btn-dark">
+        <ion-label>Crear nuevo reclamo</ion-label>
+        <ion-icon slot="start" name="add"></ion-icon>
+      </ion-button>
+
+      <ion-button (click)="toggleFinalizados()" fill="clear" class="btn-dark">
+        <ion-icon slot="start" [name]="showingFinalizados ? 'eye-off' : 'checkmark-done'"></ion-icon>
+        {{ showingFinalizados ? 'Ver activos' : 'Finalizados' }}
+      </ion-button>
+    </div>
+
+    <ion-segment [(ngModel)]="viewMode" (ionChange)="segmentChanged()" color="primary" mode="md">
+      <ion-segment-button value="chrono">
+        <ion-label style="color: #333;">Recientes</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="grouped">
+        <ion-label style="color: #466edb;">Por Sucursal</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="zone">
+        <ion-label style="color: #ff5e00;">Por Zona</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    <!-- ========== VISTA CRONOLÓGICA ========== -->
+    <ng-container *ngIf="viewMode === 'chrono'">
+      <ion-list lines="full" class="ion-no-padding">
+        <ion-item *ngFor="let reclamo of reclamos" class="reclamo-item" [ngClass]="getColorClass(reclamo)">
+          <ion-label class="ion-text-wrap">
+            <h2 class="reclamo-titulo">{{ reclamo.texto }}</h2>
+            <p class="reclamo-info">
+              <span class="sucursal-nombre">{{ reclamo.sucursal }}</span> — {{ reclamo.createdAt | date:'dd/MM/yyyy HH:mm' }}
+              <span *ngIf="reclamo.finalizado" class="text-success"> | Finalizado: {{ reclamo.fechaFinalizado | date:'dd/MM/yyyy HH:mm' }}</span>
+              <!-- 🔥 NUEVO: muestra quién creó el reclamo -->
+              <span *ngIf="reclamo.createdByName" class="created-by"> | Creado por: {{ reclamo.createdByName }}</span>
+            </p>
+          </ion-label>
+          <ion-buttons slot="end" *ngIf="!showingFinalizados" class="item-buttons">
+            <ion-button fill="clear" (click)="editarReclamo(reclamo)">
+              <ion-icon slot="icon-only" name="create" color="primary"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" (click)="deleteReclamo(reclamo)">
+              <ion-icon slot="icon-only" name="trash" color="danger"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-item>
+      </ion-list>
+    </ng-container>
+
+    <!-- ========== VISTA POR SUCURSAL ========== -->
+    <ng-container *ngIf="viewMode === 'grouped'">
+      <ion-accordion-group>
+        <ion-accordion *ngFor="let grupo of groupedReclamos" class="custom-accordion">
+          <ion-item slot="header" color="light">
+            <ion-label class="sucursal-header-label">
+              {{ grupo.sucursal }} <span class="count">({{ grupo.reclamos.length }})</span>
+            </ion-label>
+          </ion-item>
+          <div slot="content">
+            <ion-list lines="inset">
+              <ion-item *ngFor="let r of grupo.reclamos" class="inner-item" [ngClass]="getColorClass(r)">
+                <ion-label class="ion-text-wrap text-small">
+                  {{ r.texto }}
+                  <!-- 🔥 NUEVO: creador -->
+                  <ion-note *ngIf="r.createdByName" class="user-note">Creado por: {{ r.createdByName }}</ion-note>
+                </ion-label>
+                <div slot="end" class="end-container">
+                  <ion-note class="date-note">{{ r.createdAt | date:'dd/MM/yyyy HH:mm' }}</ion-note>
+                  <ion-buttons *ngIf="!showingFinalizados">
+                    <ion-button fill="clear" (click)="editarReclamo(r)">
+                      <ion-icon slot="icon-only" name="create" color="primary"></ion-icon>
+                    </ion-button>
+                    <ion-button fill="clear" (click)="deleteReclamo(r)">
+                      <ion-icon slot="icon-only" name="trash" color="danger"></ion-icon>
+                    </ion-button>
+                  </ion-buttons>
+                </div>
+              </ion-item>
+            </ion-list>
+          </div>
+        </ion-accordion>
+      </ion-accordion-group>
+    </ng-container>
+
+      <!-- ========== VISTA POR ZONA ========== -->
+    <ng-container *ngIf="viewMode === 'zone'">
+      <ion-accordion-group>
+        <ion-accordion *ngFor="let zona of groupedByZone" class="custom-accordion">
+          <!-- Encabezado de zona -->
+          <ion-item slot="header" [color]="zona.zoneColor ? undefined : 'light'" [ngClass]="zona.zoneColor">
+            <ion-label class="zona-header-label">
+              {{ zona.zona }} <span class="count">({{ zona.sucursales.length }} sucursales)</span>
+            </ion-label>
+          </ion-item>
+          <div slot="content">
+            <!-- Acordeón interno por cada sucursal de la zona -->
+            <ion-accordion-group>
+              <ion-accordion *ngFor="let suc of zona.sucursales" class="inner-accordion">
+                <!-- Encabezado de sucursal -->
+                <ion-item slot="header" [color]="suc.colorClass ? undefined : 'light'" [ngClass]="suc.colorClass">
+                  <ion-label class="sucursal-header-label">
+                    {{ suc.sucursal }} <span class="count">({{ suc.reclamos.length }})</span>
+                  </ion-label>
+                </ion-item>
+                <div slot="content">
+                  <ion-list lines="inset">
+                    <ion-item *ngFor="let r of suc.reclamos" class="inner-item" [ngClass]="getColorClass(r)">
+                      <ion-label class="ion-text-wrap text-small">
+                        {{ r.texto }}
+                        <ion-note *ngIf="r.createdByName" class="user-note">Creado por: {{ r.createdByName }}</ion-note>
+                      </ion-label>
+                      <div slot="end" class="end-container">
+                        <ion-note class="date-note">{{ r.createdAt | date:'dd/MM/yyyy HH:mm' }}</ion-note>
+                        <ion-buttons *ngIf="!showingFinalizados">
+                          <ion-button fill="clear" (click)="editarReclamo(r)">
+                            <ion-icon slot="icon-only" name="create" color="primary"></ion-icon>
+                          </ion-button>
+                          <ion-button fill="clear" (click)="deleteReclamo(r)">
+                            <ion-icon slot="icon-only" name="trash" color="danger"></ion-icon>
+                          </ion-button>
+                        </ion-buttons>
+                      </div>
+                    </ion-item>
+                  </ion-list>
+                </div>
+              </ion-accordion>
+            </ion-accordion-group>
+          </div>
+        </ion-accordion>
+      </ion-accordion-group>
+    </ng-container>
+
+    <div class="bottom-spacer"></div>
+  </div>
+</ion-content>

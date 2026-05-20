@@ -1,0 +1,55 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-title>{{ isEditing ? 'Editar Reclamo' : 'Nuevo Reclamo' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismiss()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="modal-content">
+  <div class="form-container">
+    
+    <ion-item lines="none" class="custom-input">
+      <ion-select label="Provincia" label-placement="stacked" interface="popover"
+                  [(ngModel)]="selectedProvincia" (ionChange)="onProvinciaChange()"
+                  placeholder="Seleccione provincia">
+        <ion-select-option value="Mendoza">Mendoza</ion-select-option>
+        <ion-select-option value="San Juan">San Juan</ion-select-option>
+      </ion-select>
+    </ion-item>
+
+    <ion-item lines="none" class="custom-input" *ngIf="selectedProvincia">
+      <ion-select label="Sucursal" label-placement="stacked" interface="popover"
+                  [(ngModel)]="selectedSucursal"
+                  placeholder="Seleccione sucursal">
+        <ion-select-option *ngFor="let s of sucursalesFiltradas" [value]="s">{{ s }}</ion-select-option>
+      </ion-select>
+    </ion-item>
+
+    <ion-item lines="none" class="custom-input">
+      <ion-textarea label="Descripción del Reclamo" label-placement="stacked" 
+                    [(ngModel)]="texto" rows="6" 
+                    placeholder="Escriba los detalles aquí..."
+                    class="custom-textarea"></ion-textarea>
+    </ion-item>
+
+    <div class="button-group">
+      <ion-button expand="block" (click)="guardar()" 
+                  [disabled]="!selectedSucursal || !texto.trim()"
+                  class="main-button">
+        {{ isEditing ? 'Actualizar Cambios' : 'Guardar Reclamo' }}
+      </ion-button>
+
+      <ion-button *ngIf="isEditing && !reclamo?.finalizado" 
+                  expand="block" fill="outline" color="success" 
+                  (click)="finalizarReclamo()" class="secondary-button">
+        <ion-icon slot="start" name="checkmark-done-outline"></ion-icon>
+        Finalizar Reclamo
+      </ion-button>
+    </div>
+
+  </div>
+</ion-content>
