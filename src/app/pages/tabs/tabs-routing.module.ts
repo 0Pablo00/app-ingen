@@ -50,6 +50,11 @@ const routes: Routes = [
         path: 'check',
         loadChildren: () => import('./check/check.module').then(m => m.CheckPageModule)
       },
+       {
+    path: 'reclamos',
+    loadChildren: () => import('./reclamos/reclamos.module').then( m => m.ReclamosPageModule)
+  },
+
       
 
       {
@@ -69,6 +74,7 @@ const routes: Routes = [
   },
     ]
   },
+ 
   
 
   

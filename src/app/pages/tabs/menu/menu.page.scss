@@ -73,3 +73,19 @@ display: block;
 
 
 
+.version-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-icon {
+  font-size: 22px;
+  color: #555;
+  cursor: pointer;
+  transition: color 0.2s;
+  
+  &:hover {
+    color: #000;
+  }
+}

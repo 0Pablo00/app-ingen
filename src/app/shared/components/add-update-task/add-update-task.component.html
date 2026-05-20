@@ -192,7 +192,7 @@
     <p>No hay pasos agregados. Presiona <ion-icon name="add-circle-outline"></ion-icon> para agregar.</p>
   </div>
 
-  <!-- ========== SECCIÓN: MATERIALES UTILIZADOS ========== -->
+     <!-- ========== SECCIÓN: MATERIALES UTILIZADOS ========== -->
   <ion-item class="section-header" lines="none" style="margin-top: 20px;">
     <ion-label>
       <h2>Materiales utilizados</h2>
@@ -200,32 +200,29 @@
     </ion-label>
   </ion-item>
 
-  <!-- Opciones para agregar materiales (solo si mostrarOpcionesAgregarMateriales es true) -->
-  <ng-container *ngIf="mostrarOpcionesAgregarMateriales">
-    <ion-button expand="block" fill="outline" (click)="agregarMaterialDesdeStock()" style="margin: 8px 16px;">
-      <ion-icon name="bookmark-outline" slot="start"></ion-icon>
-      Agregar desde stock de sucursal
-    </ion-button>
+  <!-- Botón para agregar desde stock (siempre visible) -->
+  <ion-button expand="block" fill="outline" (click)="agregarMaterialDesdeStock()" style="margin: 8px 16px;">
+    <ion-icon name="bookmark-outline" slot="start"></ion-icon>
+    Agregar desde stock de sucursal
+  </ion-button>
 
-    <!-- Mostrar stock actual de la sucursal (solo informativo) -->
-    <div *ngIf="materialesDisponibles.length > 0 && form.value.sucursal" class="ion-padding-horizontal">
-      <ion-item class="section-header" lines="none">
-        <ion-label>
-          <h2>Disponibles en sucursal</h2>
-        </ion-label>
-      </ion-item>
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0;">
-        <ion-chip *ngFor="let mat of materialesDisponibles" color="primary">
-          {{ mat.nombre }}: {{ mat.cantidad }} {{ mat.unidad }}
-        </ion-chip>
-      </div>
+  <!-- Mostrar stock actual de la sucursal (siempre visible cuando hay sucursal) -->
+  <div *ngIf="materialesDisponibles.length > 0 && form.value.sucursal" class="ion-padding-horizontal">
+    <ion-item class="section-header" lines="none">
+      <ion-label>
+        <h2>Disponibles en sucursal</h2>
+      </ion-label>
+    </ion-item>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0;">
+      <ion-chip *ngFor="let mat of materialesDisponibles" color="primary">
+        {{ mat.nombre }}: {{ mat.cantidad }} {{ mat.unidad }}
+      </ion-chip>
     </div>
+  </div>
 
-    <!-- Formulario para agregar material manual -->
-   
-  </ng-container>
 
-  <!-- Lista de materiales agregados (siempre visible, con botones de editar/eliminar) -->
+
+  <!-- Lista de materiales agregados -->
   <div class="materiales-list" *ngIf="form.value.materiales?.length">
     <ion-item class="material-item" *ngFor="let material of form.value.materiales; index as i">
       <ion-label class="ion-text-wrap">

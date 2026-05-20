@@ -7,6 +7,8 @@ import { UtilsService } from './utils.service';
 import { take } from 'rxjs/operators';
 import { Insumo, MaterialSucursal, MovimientoMaterial } from 'src/app/models/insumo.model';
 
+import { Reclamo } from '../models/reclamo.model';
+
 import { MaintenanceCheck } from '../models/maintenance-check.model';
 import { 
   collection, 
@@ -1427,6 +1429,127 @@ async transferirMaterialEntreSucursales(
     };
     transaction.set(doc(movimientosDestinoRef), movimientoDestino);
   });
+}
+
+// ===== RECLAMOS =====
+
+/**
+ * Agrega un nuevo reclamo a la colección global 'reclamos'
+ */
+async addReclamo(reclamo: Omit<Reclamo, 'id'>): Promise<void> {
+  try {
+    if (!this.isOnline) throw new Error('Sin conexión');
+    const reclamosRef = collection(this.firestoreModular, 'reclamos');
+    await addDoc(reclamosRef, {
+      ...reclamo,
+      finalizado: false,
+      createdAt: reclamo.createdAt || new Date().toISOString()
+    });
+    console.log('✅ Reclamo agregado');
+  } catch (error) {
+    console.error('Error al agregar reclamo:', error);
+    this.utilsSvc.presentToast({ message: 'Error al guardar reclamo', color: 'danger' });
+    throw error;
+  }
+}
+
+/**
+ * Obtiene todos los reclamos ordenados por fecha descendente (más recientes primero)
+ */
+async getReclamos(): Promise<Reclamo[]> {
+  try {
+    const reclamosRef = collection(this.firestoreModular, 'reclamos');
+    const q = query(reclamosRef, orderBy('createdAt', 'desc'));
+    
+    // Forzar servidor si hay conexión, con fallback a caché
+    let snapshot;
+    if (this.isOnline) {
+      snapshot = await getDocsFromServer(q);
+    } else {
+      snapshot = await getDocsFromCache(q);
+    }
+    
+    const reclamos = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Reclamo));
+    
+    console.log(`📋 ${reclamos.length} reclamos obtenidos`);
+    return reclamos;
+  } catch (error) {
+    console.error('Error al obtener reclamos:', error);
+    // Fallback a caché si falla el servidor
+    try {
+      const snapshot = await getDocsFromCache(query(collection(this.firestoreModular, 'reclamos'), orderBy('createdAt', 'desc')));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reclamo));
+    } catch (cacheError) {
+      this.utilsSvc.presentToast({
+        message: 'Error al cargar reclamos',
+        color: 'danger',
+        duration: 3000
+      });
+      return [];
+    }
+  }
+}
+
+
+async getReclamosActivos(): Promise<Reclamo[]> {
+  try {
+    const reclamosRef = collection(this.firestoreModular, 'reclamos');
+    const q = query(
+      reclamosRef,
+      where('finalizado', '==', false),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = this.isOnline ? await getDocsFromServer(q) : await getDocsFromCache(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reclamo));
+  } catch (error) {
+    console.error('Error al obtener reclamos activos:', error);
+    return [];
+  }
+}
+
+async getReclamosFinalizados(): Promise<Reclamo[]> {
+  try {
+    const reclamosRef = collection(this.firestoreModular, 'reclamos');
+    const q = query(
+      reclamosRef,
+      where('finalizado', '==', true),
+      orderBy('fechaFinalizado', 'desc')
+    );
+    const snapshot = this.isOnline ? await getDocsFromServer(q) : await getDocsFromCache(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Reclamo));
+  } catch (error) {
+    console.error('Error al obtener reclamos finalizados:', error);
+    return [];
+  }
+}
+
+async updateReclamo(reclamoId: string, data: Partial<Reclamo>): Promise<void> {
+  try {
+    if (!this.isOnline) throw new Error('Sin conexión');
+    const docRef = doc(this.firestoreModular, `reclamos/${reclamoId}`);
+    await updateDoc(docRef, data);
+    console.log('✅ Reclamo actualizado');
+  } catch (error) {
+    console.error('Error al actualizar reclamo:', error);
+    this.utilsSvc.presentToast({ message: 'Error al actualizar', color: 'danger' });
+    throw error;
+  }
+}
+
+async deleteReclamo(reclamoId: string): Promise<void> {
+  try {
+    if (!this.isOnline) throw new Error('Sin conexión');
+    const docRef = doc(this.firestoreModular, `reclamos/${reclamoId}`);
+    await deleteDoc(docRef);
+    console.log('✅ Reclamo eliminado');
+  } catch (error) {
+    console.error('Error al eliminar reclamo:', error);
+    this.utilsSvc.presentToast({ message: 'Error al eliminar', color: 'danger' });
+    throw error;
+  }
 }
 
 }

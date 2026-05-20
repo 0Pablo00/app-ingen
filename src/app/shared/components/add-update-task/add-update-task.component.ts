@@ -59,9 +59,9 @@ export class AddUpdateTaskComponent implements OnInit {
   // Variables para materiales desde stock
   materialesDisponibles: MaterialSucursal[] = [];
 
-  // Control de UI y consumo
-  mostrarOpcionesAgregarMateriales: boolean = true;
-  materialesOriginales: Material[] = []; // copia de los materiales al cargar la tarea
+  // Control para saber si es edición y si ya había materiales
+  materialesOriginales: Material[] = [];
+  nuevosMaterialesAgregados: Material[] = []; // para saber cuáles consumir al guardar
 
   sucursalesPorProvincia = [
     {
@@ -74,7 +74,7 @@ export class AddUpdateTaskComponent implements OnInit {
         'CORREA SAA', 'COSTA DE ARAUJO', 'COVIMET', 'DON BOSCO', 'DOVIR',
         'EL BOSQUE', 'EL CISNE', 'EL PIDIO', 'ESTACION', 'ESTANZUELA',
         'FAUSTINO', 'FRIMI 2', 'GIOL', 'GUTEMBERG', 'INDEPENDENCIA',
-        'JARDIN SERRANO', 'JUAN B JUSTO', 'JUNIN', 'LAVALLE', 'LUJAN',
+        'JARDIN SERRANO', 'JUAN B JUSTO', 'JUNIN', 'LA COLONIA', 'LAVALLE', 'LUJAN',
         'LUZURIAGA', 'MARINI', 'MARTIN FIERRO', 'MOYANO', 'NUEVO DORREGO',
         'OLASCOAGA', 'PADDLE', 'PADRE LLORENS', 'PALMIRA', 'PEDRIEL',
         'PEDRO MOLINA', 'PERITO MORENO', 'PERU', 'RAIZ', 'RIVADAVIA 2',
@@ -138,6 +138,7 @@ export class AddUpdateTaskComponent implements OnInit {
   }
 
   private necesitaPasswordParaMateriales(): boolean {
+    // Solo se necesita contraseña para editar o eliminar materiales que ya existían originalmente
     return this.isEditMode() && this.materialesOriginales.length > 0;
   }
 
@@ -145,7 +146,7 @@ export class AddUpdateTaskComponent implements OnInit {
     return new Promise(async (resolve) => {
       const alert = await this.alertCtrl.create({
         header: 'Verificar contraseña',
-        message: 'Para modificar materiales de una tarea guardada, ingrese la contraseña:',
+        message: 'Para modificar o eliminar materiales ya guardados, ingrese la contraseña:',
         inputs: [
           {
             name: 'password',
@@ -200,9 +201,7 @@ export class AddUpdateTaskComponent implements OnInit {
       expanded: grupo.expanded,
       sucursales: [...grupo.sucursales]
     }));
-    if (this.mostrarOpcionesAgregarMateriales) {
-      this.cargarMaterialesSucursal(sucursal);
-    }
+    this.cargarMaterialesSucursal(sucursal);
   }
 
   toggleProvincia(index: number) {
@@ -229,9 +228,7 @@ export class AddUpdateTaskComponent implements OnInit {
     }));
 
     if (this.task) {
-      // Guardar copia de los materiales originales
       this.materialesOriginales = JSON.parse(JSON.stringify(this.task.materiales || []));
-
       const taskData = {
         title: this.task.title || '',
         description: this.task.description || '',
@@ -252,19 +249,10 @@ export class AddUpdateTaskComponent implements OnInit {
       this.orderFileName = this.task.orderFileName || '';
       this.selectedDate = this.formatDateForInput(this.task.createdAt);
       this.isTecnicoReadOnly = true;
-
-      // Decidir si mostrar opciones para agregar materiales
-      if (this.materialesOriginales.length === 0) {
-        this.mostrarOpcionesAgregarMateriales = true;
-        if (this.task.sucursal) {
-          this.cargarMaterialesSucursal(this.task.sucursal);
-        }
-      } else {
-        this.mostrarOpcionesAgregarMateriales = false;
+      if (this.task.sucursal) {
+        this.cargarMaterialesSucursal(this.task.sucursal);
       }
     } else {
-      // Modo creación: siempre mostrar opciones
-      this.mostrarOpcionesAgregarMateriales = true;
       const now = new Date();
       this.selectedDate = this.formatDateForDateTimePicker(now);
       const tecnicoNombre = this.user?.name || '';
@@ -286,20 +274,17 @@ export class AddUpdateTaskComponent implements OnInit {
       }
     }
 
-    if (this.mostrarOpcionesAgregarMateriales) {
-      this.form.get('sucursal')?.valueChanges.subscribe(sucursal => {
-        if (sucursal) {
-          this.cargarMaterialesSucursal(sucursal);
-        } else {
-          this.materialesDisponibles = [];
-        }
-      });
-    }
+    this.form.get('sucursal')?.valueChanges.subscribe(sucursal => {
+      if (sucursal) {
+        this.cargarMaterialesSucursal(sucursal);
+      } else {
+        this.materialesDisponibles = [];
+      }
+    });
   }
 
   // ========== MÉTODOS PARA MATERIALES DESDE STOCK ==========
   async cargarMaterialesSucursal(sucursal: string) {
-    if (!this.mostrarOpcionesAgregarMateriales) return;
     try {
       const ownerUid = this.authSvc.getTasksOwnerUid();
       this.materialesDisponibles = await this.firebaseSvc.getSucursalStock(ownerUid, sucursal);
@@ -309,7 +294,6 @@ export class AddUpdateTaskComponent implements OnInit {
   }
 
   async agregarMaterialDesdeStock() {
-    if (!this.mostrarOpcionesAgregarMateriales) return;
     if (!this.form.value.sucursal) {
       this.utilsSvc.presentToast({ message: 'Primero selecciona una sucursal', color: 'warning', duration: 2000 });
       return;
@@ -333,7 +317,6 @@ export class AddUpdateTaskComponent implements OnInit {
   }
 
   async promptCantidadDesdeStock(material: MaterialSucursal) {
-    if (!this.mostrarOpcionesAgregarMateriales) return;
     const alert = await this.alertCtrl.create({
       header: `Usar ${material.nombre}`,
       subHeader: `Stock en sucursal: ${material.cantidad} ${material.unidad}`,
@@ -343,7 +326,7 @@ export class AddUpdateTaskComponent implements OnInit {
           type: 'number',
           placeholder: `Cantidad (${material.unidad})`,
           min: 0.1,
-         
+     
         }
       ],
       buttons: [
@@ -369,6 +352,7 @@ export class AddUpdateTaskComponent implements OnInit {
             };
             const materialesActuales = this.form.value.materiales || [];
             this.form.patchValue({ materiales: [...materialesActuales, nuevoMaterial] });
+            this.nuevosMaterialesAgregados.push(nuevoMaterial);
             this.utilsSvc.presentToast({ message: 'Material agregado (se descontará al guardar)', color: 'success', duration: 2000 });
             this.cargarMaterialesSucursal(this.form.value.sucursal!);
           }
@@ -411,8 +395,11 @@ export class AddUpdateTaskComponent implements OnInit {
       if (!ok) return;
     }
     const materialesActuales = this.form.value.materiales || [];
+    const eliminado = materialesActuales[index];
     materialesActuales.splice(index, 1);
     this.form.patchValue({ materiales: materialesActuales });
+    const idxNuevo = this.nuevosMaterialesAgregados.findIndex(m => m === eliminado);
+    if (idxNuevo !== -1) this.nuevosMaterialesAgregados.splice(idxNuevo, 1);
     this.utilsSvc.presentToast({ message: 'Material eliminado', color: 'warning', duration: 1500 });
     if (this.editandoMaterialIndex === index) {
       this.resetMaterialForm();
@@ -422,7 +409,6 @@ export class AddUpdateTaskComponent implements OnInit {
   }
 
   async agregarMaterialManual() {
-    if (!this.mostrarOpcionesAgregarMateriales) return;
     if (!this.nuevoMaterialNombre || !this.nuevoMaterialNombre.trim()) {
       this.utilsSvc.presentToast({ message: '⚠️ Debes ingresar el nombre del material', color: 'warning', duration: 2000 });
       return;
@@ -438,12 +424,17 @@ export class AddUpdateTaskComponent implements OnInit {
     const materialesActuales = this.form.value.materiales || [];
 
     if (this.editandoMaterialIndex !== null) {
+      if (this.necesitaPasswordParaMateriales()) {
+        const ok = await this.validarPasswordMaterial();
+        if (!ok) return;
+      }
       materialesActuales[this.editandoMaterialIndex] = nuevo;
       this.form.patchValue({ materiales: materialesActuales });
       this.utilsSvc.presentToast({ message: '✅ Material actualizado', color: 'success', duration: 1500 });
       this.resetMaterialForm();
     } else {
       this.form.patchValue({ materiales: [...materialesActuales, nuevo] });
+      this.nuevosMaterialesAgregados.push(nuevo);
       this.utilsSvc.presentToast({ message: '✅ Material agregado', color: 'success', duration: 1500 });
       this.resetMaterialForm();
     }
@@ -498,39 +489,37 @@ export class AddUpdateTaskComponent implements OnInit {
     return Math.round((completed / items.length) * 100);
   }
 
-  // ========== CONSUMO DE MATERIALES DEL STOCK ==========
+  // ========== CONSUMO DE MATERIALES ==========
   private async consumirMaterialesStock() {
-    // Solo consumir si:
-    // - Es modo creación, o
-    // - Es modo edición pero originalmente no había materiales
-    const debeConsumir = !this.isEditMode() || (this.isEditMode() && this.materialesOriginales.length === 0);
-    if (!debeConsumir) return;
-
-    const materiales = this.form.value.materiales || [];
     const sucursal = this.form.value.sucursal;
     if (!sucursal) return;
     const ordenNumero = this.form.value.title;
+    let materialesAConsumir: Material[] = [];
 
-    for (const mat of materiales) {
-      if (mat.insumoId) {
-        try {
-          await this.firebaseSvc.usarMaterialEnSucursal(
-            this.authSvc.getTasksOwnerUid(),
-            sucursal,
-            mat.insumoId,
-            mat.cantidad!,
-            ordenNumero,
-            `Consumo en orden de trabajo ${ordenNumero}`
-          );
-        } catch (error) {
-          console.error(`Error consumiendo material ${mat.nombre}:`, error);
-          this.utilsSvc.presentToast({ message: `Error al consumir ${mat.nombre}`, color: 'danger', duration: 2000 });
-        }
+    if (!this.isEditMode()) {
+      materialesAConsumir = (this.form.value.materiales || []).filter(m => m.insumoId);
+    } else {
+      materialesAConsumir = this.nuevosMaterialesAgregados.filter(m => m.insumoId);
+    }
+
+    for (const mat of materialesAConsumir) {
+      try {
+        await this.firebaseSvc.usarMaterialEnSucursal(
+          this.authSvc.getTasksOwnerUid(),
+          sucursal,
+          mat.insumoId!,
+          mat.cantidad!,
+          ordenNumero,
+          `Consumo en orden de trabajo ${ordenNumero}`
+        );
+      } catch (error) {
+        console.error(`Error consumiendo material ${mat.nombre}:`, error);
+        this.utilsSvc.presentToast({ message: `Error al consumir ${mat.nombre}`, color: 'danger', duration: 2000 });
       }
     }
   }
 
-  // ========== MÉTODOS PARA IMÁGENES (completos, no modificados) ==========
+  // ========== MÉTODOS PARA IMÁGENES ==========
   compressImage(dataUrl: string, maxWidth: number = 800, quality: number = 0.7): Promise<string> {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -848,7 +837,7 @@ export class AddUpdateTaskComponent implements OnInit {
       await this.consumirMaterialesStock();
       await this.utilsSvc.dismissLoading();
       await this.utilsSvc.dismissModal({ success: true });
-      this.utilsSvc.presentToast({ message: '✅ Tarea actualizada correctamente', color: 'success', duration: 2000 });
+      this.utilsSvc.presentToast({ message: '✅ Tarea actualizada y nuevos materiales descontados', color: 'success', duration: 2000 });
     } catch (error) {
       console.error('Error en updateTask:', error);
       await this.utilsSvc.dismissLoading();

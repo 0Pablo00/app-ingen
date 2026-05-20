@@ -20,6 +20,7 @@ import { EditOrderNumberModalComponent } from './components/edit-order-number-mo
 import { MaintenanceCheckModalComponent } from 'src/app/components/maintenance-check-modal/maintenance-check-modal.component';
 import { AddInsumoModalComponent } from 'src/app/shared/components/add-insumo-modal/add-insumo-modal.component';
 import { EditMaterialSucursalComponent } from 'src/app/shared/components/edit-material-sucursal/edit-material-sucursal.component';
+import { CreateReclamoComponent } from 'src/app/shared/components/create-reclamo/create-reclamo.component';
 
 
 
@@ -40,7 +41,8 @@ import { EditMaterialSucursalComponent } from 'src/app/shared/components/edit-ma
     EditOrderNumberModalComponent,
     MaintenanceCheckModalComponent,
     AddInsumoModalComponent,
-    EditMaterialSucursalComponent
+    EditMaterialSucursalComponent,
+    CreateReclamoComponent
     
   ],
   exports: [
@@ -61,7 +63,8 @@ import { EditMaterialSucursalComponent } from 'src/app/shared/components/edit-ma
     EditOrderNumberModalComponent,
     MaintenanceCheckModalComponent,
     AddInsumoModalComponent,
-    EditMaterialSucursalComponent
+    EditMaterialSucursalComponent,
+    CreateReclamoComponent
   ],
   imports: [
     CommonModule,

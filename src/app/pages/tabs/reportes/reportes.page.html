@@ -1,7 +1,4 @@
-<app-header color="danger"   title="Reportes Mensuales">
-
-  
-</app-header>
+<app-header color="danger" title="Reportes Mensuales"></app-header>
 
 <ion-content [fullscreen]="true" class="ion-padding">
   
@@ -26,6 +23,39 @@
     </ion-card-content>
   </ion-card>
 
+  <!-- Nueva sección para lista de verificación (impresión) -->
+  <ion-card class="selector-card">
+    <ion-card-header>
+      <ion-card-title>📋 Lista de Verificación para Impresión</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item>
+        <ion-label>Provincia</ion-label>
+        <ion-segment [(ngModel)]="provinciaSeleccionada" (ionChange)="onProvinciaChange()">
+          <ion-segment-button value="Mendoza">
+            <ion-label>Mendoza</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="San Juan">
+            <ion-label>San Juan</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </ion-item>
+      <ion-item>
+        <ion-label position="stacked">Mes (editable)</ion-label>
+        <ion-input [(ngModel)]="mesParaLista" placeholder="Ej: Mayo 2026"></ion-input>
+      </ion-item>
+      <ion-button expand="block" fill="outline" (click)="imprimirListaVerificacion()" class="ion-margin-top">
+        <ion-icon name="print-outline" slot="start"></ion-icon>
+        Generar PDF - Lista de Verificación
+      </ion-button>
+
+      <ion-button expand="block" fill="outline" (click)="imprimirPlanillaReclamos()" class="ion-margin-top">
+      <ion-icon name="document-text-outline" slot="start"></ion-icon>
+      Generar PDF - Planilla de Reclamos
+    </ion-button>
+    </ion-card-content>
+  </ion-card>
+
   <!-- Reporte de sucursales (se muestra solo si ya se cargó) -->
   <div *ngIf="reporteCargado">
     <ion-card class="stats-card">
@@ -35,7 +65,6 @@
       </ion-card-header>
       <ion-card-content>
         <ion-list lines="full" class="ranking-list">
-          <!-- Sucursal con acordeón -->
           <div *ngFor="let suc of sucursalesReporte; let i = index">
             <ion-item class="ranking-item" (click)="toggleSucursal(i)" button detail="false">
               <ion-label>
@@ -43,19 +72,17 @@
               </ion-label>
               <ion-badge color="secondary" slot="end">{{ suc.cantidad }} trabajo{{ suc.cantidad !== 1 ? 's' : '' }}</ion-badge>
             </ion-item>
-            <!-- Detalle expandible -->
             <div *ngIf="suc.expanded" class="sucursal-detalle">
               <ion-list class="detalle-list">
                 <ion-item *ngFor="let task of suc.tareas" class="detalle-item" lines="inset">
                   <ion-label>
                     <p><strong>👤 Técnico:</strong> {{ task.tecnicoNombre || 'Sin técnico' }}</p>
                     <p><strong>📅 Fecha:</strong> {{ task.createdAt | date:'dd/MM/yyyy' }}</p>
-                     <p><strong>🔢 N° Orden:</strong> 
-      <ion-text color="primary" style="cursor: pointer; text-decoration: underline;" (click)="verDetalleTarea(task)">
-        {{ task.orderNumber || 'N/A' }}
-      </ion-text>
-    </p>
-
+                    <p><strong>🔢 N° Orden:</strong> 
+                      <ion-text color="primary" style="cursor: pointer; text-decoration: underline;" (click)="verDetalleTarea(task)">
+                        {{ task.orderNumber || 'N/A' }}
+                      </ion-text>
+                    </p>
                   </ion-label>
                 </ion-item>
               </ion-list>
@@ -85,7 +112,6 @@
       {{ mostrarOperarios ? 'Ocultar' : 'Ver' }} trabajos por operarios
     </ion-button>
 
-    <!-- Lista de operarios (colapsable) -->
     <div *ngIf="mostrarOperarios">
       <ion-card class="operarios-card">
         <ion-card-header>
@@ -113,19 +139,19 @@
 
   <!-- Estado sin reporte -->
   <div *ngIf="!reporteCargado && !loading" class="empty-state">
-  <ion-icon name="document-text-outline" class="empty-icon"></ion-icon>
-  <h3>Seleccioná un mes y presioná "Cargar reporte"</h3>
-  <p *ngIf="errorMensaje" class="error-message">{{ errorMensaje }}</p>
-  <ion-button *ngIf="errorMensaje" fill="outline" (click)="cargarReporteMensual()" class="retry-button">
-    <ion-icon name="refresh-outline" slot="start"></ion-icon>
-    Reintentar
-  </ion-button>
-</div>
+    <ion-icon name="document-text-outline" class="empty-icon"></ion-icon>
+    <h3>Seleccioná un mes y presioná "Cargar reporte"</h3>
+    <p *ngIf="errorMensaje" class="error-message">{{ errorMensaje }}</p>
+    <ion-button *ngIf="errorMensaje" fill="outline" (click)="cargarReporteMensual()" class="retry-button">
+      <ion-icon name="refresh-outline" slot="start"></ion-icon>
+      Reintentar
+    </ion-button>
+  </div>
 
   <!-- Spinner de carga -->
   <div *ngIf="loading" class="loading-container">
     <ion-spinner name="crescent"></ion-spinner>
-     <p>{{ loadingMessage || 'Cargando reporte...' }}</p>
+    <p>{{ loadingMessage || 'Cargando reporte...' }}</p>
   </div>
 
 </ion-content>

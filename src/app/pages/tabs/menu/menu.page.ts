@@ -50,6 +50,11 @@ goToCheck(){
 
 }
 
+goToReclamos(){
+ this.router.navigate(['/tabs/reclamos']);
+
+}
+
 
 goToInsumos(){
  this.router.navigate(['/tabs/insumos']);

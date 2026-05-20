@@ -4,19 +4,22 @@
 
   <div class="menu-header">
   <img class="logomenu" src="assets/icon/logonuevo.png" />
-
-      <span class="version-text">V 1.07</span>
+  <div class="version-container">
+    <span class="version-text">V 1.07</span>
+    <ion-icon 
+      *ngIf="isAdmin()" 
+      name="map-outline" 
+      class="map-icon" 
+      (click)="goToSeguimiento()">
+    </ion-icon>
+  </div>
 </div>
-
   
   <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
   <div class="content ion-text-center">
-    <ion-button expand="full" class="image-button" (click)="goToSeguimiento()" *ngIf="isAdmin()">
-  <ion-icon name="map-outline" size="large" color="dark"></ion-icon>
-  <span style="color: black; margin-left: 8px;">Seguimiento</span>
-</ion-button>
+  
   
 <ion-button expand="full" class="image-button" (click)="goToObras()">
       <img src="assets/botones/ordenes.png" alt="Guardias" />
@@ -26,8 +29,8 @@
   <img src="assets/botones/reportes.png" alt="Reportes" />
 </ion-button>
 
-    <ion-button expand="full" class="image-button" (click)="goToGuardias()">
-      <img src="assets/botones/reclamos.png" alt="Guardias" />
+    <ion-button expand="full" class="image-button" (click)="goToReclamos()" *ngIf="isAdmin()">
+      <img src="assets/botones/reclamos.png" alt="Reclamos" />
     </ion-button>
 
     
